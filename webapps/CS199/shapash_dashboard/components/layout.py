@@ -1,6 +1,5 @@
 # webapps/CS199/shapash_dashboard/components/layout.py
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc, html
 
 def create_layout():
     return html.Div([
@@ -20,5 +19,14 @@ def create_layout():
                     ])
                 ], style={'width': '30%', 'display': 'inline-block', 'vertical-align': 'top'})
             ])
+        ]),
+        # Add to your layout file
+        html.Div([
+            html.Label('Target Value'),
+            dcc.Input(
+                id='target-value-input',
+                type='number',
+                placeholder='Enter desired prediction'
+            )
         ])
     ])

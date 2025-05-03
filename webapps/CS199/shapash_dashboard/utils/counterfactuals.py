@@ -1,103 +1,78 @@
 # webapps/CS199/shapash_dashboard/utils/counterfactuals.py
-import alibi
-from alibi.explainers import CounterfactualProto
 import numpy as np
 import pandas as pd
-from typing import Dict
+from sklearn.preprocessing import MinMaxScaler
 
 
 def initialize_alibi(model, X_train):
-    """Initialize Alibi Counterfactual explainer"""
-    # Calculate mean and std from training data for feature scaling
-    mean = X_train.mean(axis=0)
-    std = X_train.std(axis=0)
-
-    # Initialize explainer
-    cf = CounterfactualProto(
-        predictor=model.predict_proba,
-        shape=(1, X_train.shape[1]),
-        kappa=1.0,
-        beta=0.1,
-        feature_range=(
-            X_train.min().values,
-            X_train.max().values
-        ),
-        eps=0.01,
-        eps_std=0.1,
-        max_iterations=500,
-        theta=10.0,
-    )
-
-    # Fit the explainer on training data
-    cf.fit(X_train)
-    return cf
+    """Initialize a simple counterfactual generator"""
+    return {
+        'model': model,
+        'scaler': MinMaxScaler().fit(X_train),
+        'feature_ranges': {
+            'min': X_train.min(),
+            'max': X_train.max()
+        }
+    }
 
 
-def parse_feature_input(feature_values: str, feature_names: list) -> Dict:
-    """Parse input string into feature dictionary"""
+def generate_counterfactual(explainer, instance, target_value):
+    """Generate counterfactual using perturbation-based approach"""
     try:
-        values = [x.strip() for x in feature_values.split(',')]
-        feature_dict = {}
-        for val in values:
-            key, value = val.split('=')
-            key = key.strip()
-            if key not in feature_names:
-                raise ValueError(f"Invalid feature name: {key}")
-            feature_dict[key] = float(value) if '.' in value else int(value)
-        return feature_dict
-    except Exception as e:
-        return None
+        # Convert target value to float
+        target = float(target_value)
 
+        # Get model and ranges
+        model = explainer['model']
+        feature_ranges = explainer['feature_ranges']
 
-def generate_counterfactual(model, feature_values: str) -> str:
-    """Generate counterfactual explanations"""
-    if not feature_values:
-        return "Please enter feature values in format: feature1=value1, feature2=value2"
-
-    try:
-        # Get feature names from model
-        feature_names = model.feature_names_
-
-        # Parse input
-        feature_dict = parse_feature_input(feature_values, feature_names)
-        if not feature_dict:
-            return "Invalid input format. Please use: feature1=value1, feature2=value2"
-
-        # Create query instance
-        query = pd.DataFrame([feature_dict])
-        query = query.reindex(columns=feature_names, fill_value=0)
-        X = query.values
-
-        # Generate counterfactual
-        cf_explainer = model.cf_explainer  # Set in app.py
-        explanation = cf_explainer.explain(X)
-
-        if explanation.cf is not None:
-            # Get the counterfactual instance
-            cf_instance = explanation.cf['X']
-
-            # Format the changes
-            changes = []
-            for i, (name, orig, cf) in enumerate(zip(feature_names, X[0], cf_instance[0])):
-                if abs(orig - cf) > 0.001:
-                    changes.append(f"{name}: {orig:.2f} → {cf:.2f}")
-
-            # Add prediction probabilities
-            orig_pred = model.predict_proba(X)[0]
-            cf_pred = model.predict_proba(cf_instance)[0]
-
-            result = [
-                "Original prediction probabilities:",
-                f"Class 0: {orig_pred[0]:.3f}, Class 1: {orig_pred[1]:.3f}",
-                "\nCounterfactual prediction probabilities:",
-                f"Class 0: {cf_pred[0]:.3f}, Class 1: {cf_pred[1]:.3f}",
-                "\nRequired changes:",
-                *changes
-            ]
-
-            return "\n".join(result)
+        # Convert instance to numpy if needed
+        if isinstance(instance, pd.DataFrame):
+            original = instance.values
         else:
-            return "No counterfactual found"
+            original = instance.copy()
+
+        # Reshape if needed
+        if len(original.shape) == 1:
+            original = original.reshape(1, -1)
+
+        # Initialize counterfactual as copy of original
+        counterfactual = original.copy()
+
+        # Perturbation parameters
+        max_iter = 100
+        step_size = 0.1
+        tolerance = 0.1
+
+        # Iteratively perturb features
+        for _ in range(max_iter):
+            pred = model.predict(counterfactual)[0]
+
+            if abs(pred - target) < tolerance:
+                return {
+                    'counterfactual': counterfactual,
+                    'original': original,
+                    'success': True
+                }
+
+            # Calculate gradient direction
+            direction = 1 if pred < target else -1
+
+            # Perturb features within bounds
+            for j in range(counterfactual.shape[1]):
+                delta = direction * step_size * (feature_ranges['max'].iloc[j] - feature_ranges['min'].iloc[j])
+                counterfactual[0, j] = np.clip(
+                    counterfactual[0, j] + delta,
+                    feature_ranges['min'].iloc[j],
+                    feature_ranges['max'].iloc[j]
+                )
+
+        return {
+            'counterfactual': counterfactual,
+            'original': original,
+            'success': False
+        }
 
     except Exception as e:
-        return f"Error generating counterfactual: {str(e)}"
+        print(f"Error generating counterfactual: {str(e)}")
+        return None
