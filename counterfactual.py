@@ -88,7 +88,8 @@ def _render_feature_control(feat, orig_val, display_names, category_labels,
 
 def _render_feature_group(title, icon, caption, feat_list, features, original,
                           display_names, category_labels, likert_features,
-                          feat_min, feat_max, modified_values, image=None):
+                          feat_min, feat_max, modified_values, image=None,
+                          key_prefix="wi"):
     """Render a group of feature controls with a header."""
     st.markdown(f"#### {icon} {title}")
     st.caption(caption)
@@ -104,7 +105,7 @@ def _render_feature_group(title, icon, caption, feat_list, features, original,
         with cols[col_idx % 2]:
             modified_values[feat] = _render_feature_control(
                 feat, float(original[feat]), display_names, category_labels,
-                likert_features, feat_min, feat_max)
+                likert_features, feat_min, feat_max, key_prefix=key_prefix)
         col_idx += 1
 
 # Template Explanations
@@ -187,6 +188,7 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
     feat_min = X_train[features].min()
     feat_max = X_train[features].max()
     modified_values = {}
+    key_prefix = f"wi_{sample_idx}"
 
     controls_col, results_col = st.columns([1, 1])
 
@@ -199,7 +201,8 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
                               DEMOGRAPHIC_FEATURES, features, original,
                               display_names, category_labels, likert_features,
                               feat_min, feat_max, modified_values,
-                              image="assets/demographics.png")
+                              image="assets/demographics.png",
+                              key_prefix=key_prefix)
 
         # Income + Occupation side-by-side
         inc_col, occ_col = st.columns(2)
@@ -207,13 +210,15 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
             if "Income" in features:
                 modified_values["Income"] = _render_feature_control(
                     "Income", float(original["Income"]), display_names,
-                    category_labels, likert_features, feat_min, feat_max)
+                    category_labels, likert_features, feat_min, feat_max,
+                    key_prefix=key_prefix)
         with occ_col:
             orig_job = next((jf for jf in JOB_FEATURES
                              if jf in features and float(original[jf]) == 1.0), "Job_Employed")
             selected_job = st.selectbox("Occupation", JOB_FEATURES,
                                         format_func=lambda x: JOB_OPTIONS[x],
-                                        index=JOB_FEATURES.index(orig_job), key="wi_occupation")
+                                        index=JOB_FEATURES.index(orig_job),
+                                        key=f"{key_prefix}_occupation")
             for jf in JOB_FEATURES:
                 modified_values[jf] = 1.0 if jf == selected_job else 0.0
 
@@ -231,7 +236,8 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
                               LIFESTYLE_FEATURES, features, original,
                               display_names, category_labels, likert_features,
                               feat_min, feat_max, modified_values,
-                              image="assets/lifestyle.png")
+                              image="assets/lifestyle.png",
+                              key_prefix=key_prefix)
 
         st.markdown("---")
         _render_feature_group("COVID Impact", "🦠",
@@ -239,7 +245,8 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
                               COVID_FEATURES, features, original,
                               display_names, category_labels, likert_features,
                               feat_min, feat_max, modified_values,
-                              image="assets/covid.png")
+                              image="assets/covid.png",
+                              key_prefix=key_prefix)
 
         # Any remaining features not in the groups
         remaining = [f for f in features if f not in modified_values and f not in JOB_FEATURES]
@@ -248,7 +255,8 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
             _render_feature_group("Other Features", "📋", "",
                                   remaining, features, original,
                                   display_names, category_labels, likert_features,
-                                  feat_min, feat_max, modified_values)
+                                  feat_min, feat_max, modified_values,
+                                  key_prefix=key_prefix)
 
     # Results
     modified_df = pd.DataFrame([modified_values], columns=features)
