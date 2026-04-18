@@ -1,5 +1,7 @@
 import streamlit as st
 from model import load_artifacts, DEFAULT_CATEGORY_LABELS, DEFAULT_DISPLAY_NAMES, DEFAULT_LIKERT_FEATURES
+import warnings
+warnings.filterwarnings("ignore")
 
 st.set_page_config(
     page_title="XAI Dashboard — UCLA Loneliness",
