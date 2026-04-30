@@ -175,7 +175,7 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
     st.title("🔧 What-If Analysis")
     st.info(
         "Explore how changing a person's characteristics would affect the prediction."
-        + (" Predictions use the **LightGBM surrogate** for fast response."
+        + (" Predictions use the **XGBoost surrogate** for fast response."
            if surrogate else ""))
 
     options, labels = build_person_options(X_explain, class_names, precomputed_preds)

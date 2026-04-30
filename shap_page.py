@@ -56,7 +56,7 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
     st.info(
         "**SHAP (SHapley Additive exPlanations)** shows how each feature contributes "
         "to the model's prediction for each person. "
-        "SHAP values are computed via a **LightGBM surrogate** trained to mimic the "
+        "SHAP values are computed via an **XGBoost surrogate** trained to mimic the "
         "primary TabPFN model, using exact TreeSHAP."
     )
 
