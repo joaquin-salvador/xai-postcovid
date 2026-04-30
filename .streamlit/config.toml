@@ -1,0 +1,19 @@
+# Forces the dashboard to always render in light mode and removes the
+# Streamlit Settings menu so the "Dark" and "Use system setting" theme
+# options are not exposed to viewers.
+
+[theme]
+base = "light"
+primaryColor = "#667eea"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[client]
+# "viewer" hides the Settings dialog (and with it the theme switcher),
+# while keeping fullscreen / print / about for end users.
+toolbarMode = "viewer"
+
+[browser]
+gatherUsageStats = false

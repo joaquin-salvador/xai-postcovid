@@ -1,0 +1,4 @@
+Method,Validity,Avg Sparsity,Avg Proximity,Time (s)
+random,1.0,2.892,17.556,5495.112305879593
+genetic,0.0,,,325.3797838687897
+kdtree,0.0,,,325.4161214828491

@@ -242,23 +242,29 @@ def load_artifacts():
         with open(preds_path, "rb") as f:
             precomputed_preds = pickle.load(f)
 
-    precomputed_cfs = None
-    for cf_name in ["counterfactual_results.pkl", "dice_results.pkl"]:
-        cf_path = os.path.join(EXPLAINERS_DIR, cf_name)
-        if os.path.exists(cf_path):
+    def _load_cf_dict(filenames):
+        for cf_name in filenames:
+            cf_path = os.path.join(EXPLAINERS_DIR, cf_name)
+            if not os.path.exists(cf_path):
+                continue
             with open(cf_path, "rb") as f:
                 loaded = pickle.load(f)
             if isinstance(loaded, dict):
-                precomputed_cfs = loaded
-            elif isinstance(loaded, list):
-                precomputed_cfs = {}
-                for item in loaded:
-                    precomputed_cfs[item["sample_idx"]] = item["counterfactuals"]
-            break
+                return loaded
+            if isinstance(loaded, list):
+                return {item["sample_idx"]: item["counterfactuals"] for item in loaded}
+        return None
+
+    precomputed_cfs = _load_cf_dict(
+        ["counterfactual_results.pkl", "dice_results.pkl"]
+    )
+    precomputed_cfs_limited = _load_cf_dict(
+        ["counterfactual_results_limited.pkl", "dice_results_limited.pkl"]
+    )
 
     return (model, surrogate, X_train, X_test, X_explain, y_train, y_test,
             shap_values_test, shap_expected_value, feature_info,
-            precomputed_preds, precomputed_cfs)
+            precomputed_preds, precomputed_cfs, precomputed_cfs_limited)
 
 
 # Model Overview Page
@@ -315,9 +321,27 @@ def render_overview(model, X_test, y_test, class_names, precomputed_preds):
     st.subheader("Why SHAP and DiCE?")
     st.markdown(
         "**SHAP (SHapley Additive exPlanations)**\n\n"
-        "to be added this monday (april 20) \n\n"
+        "SHAP was selected because it produces **both global and local feature importance** "
+        "from the same set of values. Averaging the absolute SHAP values across the test set "
+        "gives population-level importance (which features matter overall), while the "
+        "per-sample SHAP vector explains an individual prediction (why *this* person was "
+        "classified the way they were). The values are grounded in cooperative game theory — "
+        "they are the unique attribution that satisfies efficiency, symmetry, dummy, and "
+        "additivity, so feature contributions sum exactly to the model output minus its "
+        "expected value. We compute **TreeSHAP** on the LightGBM surrogate, which gives "
+        "*exact* SHAP values in polynomial time — substantially faster than KernelSHAP "
+        "(which is model-agnostic but approximate and orders of magnitude slower on this "
+        "dataset).\n\n"
         "**DiCE (Diverse Counterfactual Explanations)**\n\n"
-        "to be added this monday (april 20) \n\n"
+        "DiCE generates **diverse, actionable** counterfactuals — multiple alternative "
+        "scenarios that would flip the model's prediction, while differing from each other "
+        "(diversity) and staying close to the original instance (proximity). Crucially, "
+        "DiCE supports first-class constraints via `features_to_vary` and `permitted_range`, "
+        "which let us *forbid* changes to immutable attributes such as Age and Sex. This is "
+        "what makes the **Demographics-Excluded** counterfactual set in the explorer below "
+        "meaningful: a recommendation a person can actually act on, not one that requires "
+        "becoming younger or changing biological sex. DiCE is model-agnostic, so the same "
+        "explainer wraps TabPFN directly — no surrogate needed for counterfactual search."
     )
     st.markdown("---")
 

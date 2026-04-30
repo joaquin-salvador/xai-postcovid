@@ -67,7 +67,8 @@ def main():
     try:
         (model, surrogate, X_train, X_test, X_explain, y_train, y_test,
          shap_values_test, shap_expected_value, feature_info,
-         precomputed_preds, precomputed_cfs) = load_artifacts()
+         precomputed_preds, precomputed_cfs,
+         precomputed_cfs_limited) = load_artifacts()
     except FileNotFoundError as e:
         st.error(
             "Could not load model artifacts. Please run the notebook first "
@@ -85,6 +86,7 @@ def main():
             "    explainers/shap_expected_value.pkl\n"
             "    explainers/feature_info.pkl\n"
             "    explainers/counterfactual_results.pkl\n"
+            "    explainers/counterfactual_results_limited.pkl\n"
             "    artifacts/X_train.csv\n"
             "    artifacts/X_test.csv\n"
             "    artifacts/y_train.csv\n"
@@ -124,7 +126,14 @@ def main():
     st.sidebar.markdown(f"- Test samples: **{len(X_test)}**")
     st.sidebar.markdown(f"- SHAP explained: **{len(X_explain)}** samples")
     if precomputed_cfs:
-        st.sidebar.markdown(f"- Counterfactuals: **{len(precomputed_cfs)}** samples")
+        st.sidebar.markdown(f"- Unrestricted CFs: **{len(precomputed_cfs)}** samples")
+    if precomputed_cfs_limited:
+        immutable = feature_info.get("immutable_features", [])
+        excluded = ", ".join(immutable) if immutable else "demographics"
+        st.sidebar.markdown(
+            f"- Demographics-Excluded CFs: **{len(precomputed_cfs_limited)}** samples"
+            f"  \n  _(keeps {excluded} fixed)_"
+        )
     st.sidebar.markdown("---")
     st.sidebar.markdown("**📏 UCLA Loneliness Scale**")
     st.sidebar.markdown("🟢 Score < 22: **Low Loneliness**")
@@ -152,7 +161,8 @@ def main():
         from counterfactual import render_counterfactuals
         render_counterfactuals(model, X_test, y_test, features, class_names,
                                feature_info, display_names, category_labels,
-                               likert_features, precomputed_cfs, precomputed_preds)
+                               likert_features, precomputed_cfs,
+                               precomputed_cfs_limited, precomputed_preds)
 
 if __name__ == "__main__":
     main()

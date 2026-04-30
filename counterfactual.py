@@ -5,7 +5,7 @@ import numpy as np
 from model import (
     _import_shap, _import_matplotlib, _import_plotly,
     get_display_name, format_feature_value,
-    build_person_options, get_prediction, build_profile_df,
+    build_person_options, build_person_label, get_prediction, build_profile_df,
     BINARY_FEATURES, JOB_FEATURES, JOB_OPTIONS,
 )
 
@@ -322,148 +322,270 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
     st.markdown("---")
     with st.expander("📏 Feature Scale Descriptions"):
         st.markdown(
+            "Likert items are scored from **1 = *Not at all true*** to "
+            "**7 = *Very true***. Each row shows the original survey "
+            "question that the respondent answered.\n\n"
             "**Demographics**\n\n"
             "| Feature | Scale |\n|---|---|\n"
-            "| Sex | Binary: Male / Female |\n| Age | Years (19-92) |\n"
+            "| Sex | Binary: Male / Female |\n"
+            "| Age | Years (19-92) |\n"
             "| Marital Status | Binary: Married / Unmarried |\n"
             "| Has Children | Binary: Yes / No |\n"
             "| Household Income | Ordinal categories (JPY brackets, incl. Missing) |\n"
             "| Occupation | One-hot: Employed, Homemaker, Student, Unemployed, Other |\n\n"
-            "**Lifestyle** _(all 1-7 Likert scale)_\n\n"
-            "| Feature | Description |\n|---|---|\n"
-            "| Social/Physical Activity | _To be added_ |\n"
-            "| Exercise Frequency | _To be added_ |\n"
-            "| Healthy Diet | _To be added_ |\n"
-            "| Healthy Sleep | _To be added_ |\n"
-            "| Offline Social Interaction | _To be added_ |\n"
-            "| Online Social Interaction | _To be added_ |\n\n"
-            "**COVID Impact** _(all 1-7 Likert scale)_\n\n"
-            "| Feature | Description |\n|---|---|\n"
-            "| Altruistic Behavior | _To be added_ |\n"
-            "| Frustration Level | _To be added_ |\n"
-            "| Optimism Level | _To be added_ |\n"
-            "| COVID Anxiety | _To be added_ |\n"
-            "| COVID-related Sleeplessness | _To be added_ |\n"
-            "| Economic Deterioration | _To be added_ |\n"
-            "| Social Interaction Deterioration | _To be added_ |\n"
-            "| Difficulty Living | _To be added_ |\n"
-            "| Difficulty Working | _To be added_ |"
+            "**Lifestyle** _(1 = Not at all true … 7 = Very true)_\n\n"
+            "| Feature | Survey item |\n|---|---|\n"
+            "| Social/Physical Activity | I engaged in hobbies and other activities that I could become passionate about. |\n"
+            "| Exercise Frequency | I try to exercise to stay healthy (both indoors and outdoors). |\n"
+            "| Healthy Diet | I ate meals with nutritional balance in mind. |\n"
+            "| Healthy Sleep | My wake-up and bedtimes were pretty consistent. |\n"
+            "| Offline Social Interaction | I interacted with family and friends in person (excluding work and classes). |\n"
+            "| Online Social Interaction | I interacted with family and friends online via chat or video calls (excluding work or class). |\n\n"
+            "**COVID Impact** _(1 = Not at all true … 7 = Very true)_\n\n"
+            "| Feature | Survey item |\n|---|---|\n"
+            "| Altruistic Behavior | I voluntarily took preventive actions (mask, hand-washing, limiting going out, etc.) to prevent spreading COVID-19 to family and others. |\n"
+            "| Frustration Level | Changes in my life sometimes made me irritable and angry. |\n"
+            "| Optimism Level | I thought positively about the future. |\n"
+            "| COVID Anxiety | Watching the news about the new coronavirus made me feel nervous and anxious. |\n"
+            "| COVID-related Sleeplessness | I couldn't sleep because I was worried about catching the new coronavirus. |\n"
+            "| Economic Deterioration | The economic situation worsened. |\n"
+            "| Social Interaction Deterioration | Relationships with close people such as family and friends have deteriorated. |\n"
+            "| Difficulty Living | Daily life was disrupted by shortages of COVID-19 prevention supplies (masks, thermometers, etc.) and other daily necessities. |\n"
+            "| Difficulty Working | Changes in my lifestyle have caused problems with my work and studies. |"
         )
+
+# Counterfactual Explorer helpers
+def _scenario_changes_table(cf, original_values, features, display_names,
+                            category_labels, likert_features):
+    """Return a DataFrame of feature changes for a single scenario."""
+    rows = [{
+        "Feature": get_display_name(f, display_names),
+        "Current": format_feature_value(f, original_values[f], category_labels, likert_features),
+        "Needed": format_feature_value(f, cf[f], category_labels, likert_features),
+        "Direction": _change_direction(f, cf[f], original_values[f]),
+    } for f in features
+      if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01]
+    return pd.DataFrame(rows)
+
+
+def _check_immutable(cf, original_values, immutable_features):
+    """Return list of immutable features that were changed (constraint violations)."""
+    if not immutable_features:
+        return []
+    return [f for f in immutable_features
+            if f in cf and abs(cf[f] - original_values[f]) > 0.01]
+
+
+def _render_cf_set(cf_records, original_values, features, display_names,
+                   category_labels, likert_features, class_names,
+                   original_pred, key_prefix, immutable_features=None):
+    """Render scenario navigator + change table + explanation + frequency chart for one CF set."""
+    if not cf_records:
+        st.info("No counterfactuals available for this person in this set.")
+        return
+
+    if immutable_features:
+        immutable_disp = ", ".join(get_display_name(f, display_names) for f in immutable_features)
+        st.caption(f"🔒 These scenarios keep **{immutable_disp}** constant.")
+
+    n_scenarios = len(cf_records)
+    st.markdown(f"Found **{n_scenarios}** alternative scenario(s).")
+
+    if n_scenarios > 1:
+        si_key = f"{key_prefix}_scenario_idx"
+        nav_l, nav_c, nav_r = st.columns([1, 3, 1])
+        with nav_l:
+            if st.button("◀ Prev", key=f"{key_prefix}_prev", use_container_width=True):
+                st.session_state[si_key] = (
+                    st.session_state.get(si_key, 0) - 1) % n_scenarios
+        with nav_r:
+            if st.button("Next ▶", key=f"{key_prefix}_next", use_container_width=True):
+                st.session_state[si_key] = (
+                    st.session_state.get(si_key, 0) + 1) % n_scenarios
+        si = st.session_state.get(si_key, 0)
+        with nav_c:
+            st.markdown(f"<div style='text-align:center;padding-top:5px;'>"
+                        f"<strong>Scenario {si+1} of {n_scenarios}</strong></div>",
+                        unsafe_allow_html=True)
+    else:
+        si = 0
+        st.markdown("**Scenario 1 of 1**")
+
+    cf = cf_records[si]
+    changes_df = _scenario_changes_table(
+        cf, original_values, features, display_names, category_labels, likert_features)
+
+    if not changes_df.empty:
+        _render_styled_changes(changes_df)
+
+        violations = _check_immutable(cf, original_values, immutable_features)
+        if immutable_features:
+            if violations:
+                viol_disp = ", ".join(get_display_name(f, display_names) for f in violations)
+                st.error(f"⚠️ Constraint violation — immutable feature(s) changed: {viol_disp}")
+            else:
+                imm_disp = ", ".join(get_display_name(f, display_names) for f in immutable_features)
+                st.success(f"✓ Constraint satisfied: {imm_disp} held constant.")
+
+        st.markdown("---")
+        st.markdown(_explain_counterfactual(
+            original_values.to_dict(), cf, features, display_names,
+            category_labels, likert_features, class_names, original_pred))
+    else:
+        st.info("No significant changes in this scenario.")
+
+    if n_scenarios > 1:
+        _render_frequency_chart(cf_records, original_values, features,
+                                display_names, key_prefix)
+
+
+def _render_frequency_chart(cf_records, original_values, features,
+                            display_names, key_prefix):
+    """Bar chart of how often each feature is changed across all scenarios for the sample."""
+    px, _ = _import_plotly()
+    st.markdown("---")
+    st.subheader("📊 Most Frequently Changed Features")
+
+    feat_counts = {}
+    for cf in cf_records:
+        for f in features:
+            if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01:
+                dname = get_display_name(f, display_names)
+                feat_counts[dname] = feat_counts.get(dname, 0) + 1
+
+    if not feat_counts:
+        st.info("No features were changed across the available scenarios.")
+        return
+
+    summary_df = pd.DataFrame(
+        sorted(feat_counts.items(), key=lambda x: -x[1]),
+        columns=["Feature", "Times Changed"])
+    fig = px.bar(summary_df, x="Times Changed", y="Feature",
+                 orientation="h", color_discrete_sequence=["steelblue"])
+    fig.update_layout(yaxis=dict(autorange="reversed"),
+                      height=max(300, len(feat_counts) * 30))
+    st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_freq_chart")
+
 
 # Counterfactual Explorer
 def render_counterfactuals(model, X_test, y_test, features, class_names,
                            feature_info, display_names, category_labels,
-                           likert_features, precomputed_cfs, precomputed_preds):
+                           likert_features, precomputed_cfs,
+                           precomputed_cfs_limited, precomputed_preds):
     st.title("🔄 Counterfactual Explorer")
+
+    immutable_features = feature_info.get("immutable_features", []) or []
+    immutable_disp = [get_display_name(f, display_names) for f in immutable_features]
+
     st.info(
         "Counterfactual explanations answer: **\"What would need to change for this "
         "person's prediction to be different?\"** They show the smallest changes needed "
         "to flip the model's decision."
     )
 
-    if precomputed_cfs is not None:
-        available_indices = sorted(precomputed_cfs.keys())
-        st.success(f"Loaded **{len(available_indices)}** pre-computed counterfactual scenarios.")
-    else:
-        available_indices = list(range(len(X_test)))
+    has_unr = bool(precomputed_cfs)
+    has_lim = bool(precomputed_cfs_limited)
+
+    if has_unr and has_lim and immutable_features:
+        st.markdown(
+            "Two counterfactual sets are available:\n\n"
+            "- **🔓 Unrestricted** — every feature is free to change.\n"
+            f"- **🔒 Demographics-Excluded** — keeps **{', '.join(immutable_disp)}** fixed, "
+            "so the suggested changes are actionable for the individual."
+        )
+    elif has_lim and immutable_features:
+        st.markdown(
+            f"Counterfactuals shown keep **{', '.join(immutable_disp)}** fixed."
+        )
+
+    available_unr = sorted(precomputed_cfs.keys()) if has_unr else []
+    available_lim = sorted(precomputed_cfs_limited.keys()) if has_lim else []
+    available = sorted(set(available_unr) | set(available_lim))
+
+    if not available:
         st.warning("No pre-computed counterfactuals found. Run the notebook first.")
+        return
 
-    col1, col2 = st.columns([1, 1])
+    parts = []
+    if has_unr:
+        parts.append(f"**{len(available_unr)}** unrestricted")
+    if has_lim:
+        parts.append(f"**{len(available_lim)}** demographics-excluded")
+    st.success(
+        f"Loaded {' and '.join(parts)} CF scenario set(s) "
+        f"covering {len(available)} unique persons."
+    )
 
-    with col1:
+    sample_idx = st.selectbox(
+        "Select a person:",
+        available,
+        format_func=lambda x: build_person_label(
+            x, X_test.iloc[x], class_names, precomputed_preds),
+        key="cf_sample",
+    )
+    instance = X_test.iloc[[sample_idx]]
+    original_values = instance.iloc[0]
+
+    pred, prob = get_prediction(model, X_test, sample_idx, precomputed_preds)
+    original_pred = pred if pred is not None else 0
+
+    profile_col, meta_col = st.columns([2, 1])
+    with profile_col:
         st.subheader("Selected Person")
-        options, labels = build_person_options(
-            X_test.iloc[available_indices] if precomputed_cfs else X_test,
-            class_names, precomputed_preds)
-        # Map back to original indices
-        idx_map = {i: available_indices[i] for i in range(len(available_indices))} if precomputed_cfs else None
-        sample_pos = st.selectbox("Select a person:", available_indices,
-                                  format_func=lambda x: labels.get(
-                                      available_indices.index(x) if precomputed_cfs else x,
-                                      f"Person {x+1}"),
-                                  key="cf_sample")
-        sample_idx = sample_pos
-        instance = X_test.iloc[[sample_idx]]
-
-        pred, prob = get_prediction(model, X_test, sample_idx, precomputed_preds)
         if pred is not None:
             st.markdown(f"**Current Prediction**: {class_names[pred]} "
                         f"({prob[pred]:.1%} confidence)")
+        st.dataframe(
+            build_profile_df(original_values, features, display_names,
+                             category_labels, likert_features),
+            width="stretch", hide_index=True,
+        )
+    with meta_col:
+        if immutable_features:
+            st.markdown("**🔒 Immutable Features**")
+            st.caption("Held constant in the demographics-excluded set.")
+            for f in immutable_features:
+                st.markdown(
+                    f"- **{get_display_name(f, display_names)}**: "
+                    f"{format_feature_value(f, float(original_values[f]), category_labels, likert_features)}"
+                )
+        st.markdown("**CF availability for this person**")
+        if has_unr:
+            mark = "✅" if sample_idx in available_unr else "—"
+            st.markdown(f"- {mark} Unrestricted")
+        if has_lim:
+            mark = "✅" if sample_idx in available_lim else "—"
+            st.markdown(f"- {mark} Demographics-Excluded")
 
-        st.markdown("**Person's Profile**")
-        st.dataframe(build_profile_df(instance.iloc[0], features, display_names,
-                                      category_labels, likert_features),
-                     width="stretch", hide_index=True)
+    st.markdown("---")
 
-    with col2:
-        st.subheader("Counterfactual Scenarios")
-        original_values = instance.iloc[0]
-        cf_records = (precomputed_cfs.get(sample_idx) if precomputed_cfs else None)
+    tab_labels = []
+    if has_unr:
+        tab_labels.append("🔓 Unrestricted")
+    if has_lim:
+        tab_labels.append("🔒 Demographics-Excluded")
 
-        if cf_records:
-            st.markdown(f"Found **{len(cf_records)}** alternative scenario(s).")
-            st.markdown("**What would need to change?**")
+    tabs = st.tabs(tab_labels)
+    ti = 0
 
-            n_scenarios = len(cf_records)
-            if n_scenarios > 1:
-                nav_l, nav_c, nav_r = st.columns([1, 3, 1])
-                with nav_l:
-                    if st.button("◀ Prev", key="cf_prev", use_container_width=True):
-                        st.session_state["cf_scenario_idx"] = (
-                            st.session_state.get("cf_scenario_idx", 0) - 1) % n_scenarios
-                with nav_r:
-                    if st.button("Next ▶", key="cf_next", use_container_width=True):
-                        st.session_state["cf_scenario_idx"] = (
-                            st.session_state.get("cf_scenario_idx", 0) + 1) % n_scenarios
-                si = st.session_state.get("cf_scenario_idx", 0)
-                with nav_c:
-                    st.markdown(f"<div style='text-align:center;padding-top:5px;'>"
-                                f"<strong>Scenario {si+1} of {n_scenarios}</strong></div>",
-                                unsafe_allow_html=True)
-            else:
-                si = 0
-                st.markdown("**Scenario 1 of 1**")
+    if has_unr:
+        with tabs[ti]:
+            _render_cf_set(
+                precomputed_cfs.get(sample_idx),
+                original_values, features, display_names,
+                category_labels, likert_features, class_names,
+                original_pred, key_prefix="unr",
+                immutable_features=None,
+            )
+        ti += 1
 
-            cf = cf_records[si]
-            changes = [{
-                "Feature": get_display_name(f, display_names),
-                "Current": format_feature_value(f, original_values[f], category_labels, likert_features),
-                "Needed": format_feature_value(f, cf[f], category_labels, likert_features),
-                "Direction": _change_direction(f, cf[f], original_values[f]),
-            } for f in features
-              if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01]
-
-            if changes:
-                _render_styled_changes(pd.DataFrame(changes))
-                st.markdown("---")
-                st.markdown(_explain_counterfactual(
-                    original_values.to_dict(), cf, features, display_names,
-                    category_labels, likert_features, class_names,
-                    pred if pred is not None else 0))
-            else:
-                st.info("No significant changes in this scenario.")
-        else:
-            st.info("No counterfactuals available for this person.")
-
-    # Summary chart
-    if cf_records and len(cf_records) > 1:
-        px, _ = _import_plotly()
-        st.markdown("---")
-        st.subheader("📊 Summary: Most Frequently Changed Features")
-
-        feat_counts = {}
-        for cf in cf_records:
-            for f in features:
-                if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01:
-                    dname = get_display_name(f, display_names)
-                    feat_counts[dname] = feat_counts.get(dname, 0) + 1
-
-        if feat_counts:
-            summary_df = pd.DataFrame(
-                sorted(feat_counts.items(), key=lambda x: -x[1]),
-                columns=["Feature", "Times Changed"])
-            fig = px.bar(summary_df, x="Times Changed", y="Feature",
-                         orientation="h", color_discrete_sequence=["steelblue"])
-            fig.update_layout(yaxis=dict(autorange="reversed"),
-                              height=max(300, len(feat_counts) * 30))
-            st.plotly_chart(fig, width="stretch")
+    if has_lim:
+        with tabs[ti]:
+            _render_cf_set(
+                precomputed_cfs_limited.get(sample_idx),
+                original_values, features, display_names,
+                category_labels, likert_features, class_names,
+                original_pred, key_prefix="lim",
+                immutable_features=immutable_features,
+            )
+        ti += 1

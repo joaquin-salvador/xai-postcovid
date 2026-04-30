@@ -1,7 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="48d9501d-2bc3-4fac-8d9a-39ee4f61ed7f" name="Changes" comment="" />
+    <list default="true" id="48d9501d-2bc3-4fac-8d9a-39ee4f61ed7f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/counterfactual.py" beforeDir="false" afterPath="$PROJECT_DIR$/counterfactual.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/artifacts/X_explain.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/artifacts/X_explain.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/artifacts/test_predictions.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/artifacts/test_predictions.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/counterfactual_results.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/counterfactual_results.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/dice_results.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/dice_results.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/feature_info.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/feature_info.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/shap_expected_value.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/shap_expected_value.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/shap_explainer.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/shap_values_test.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/shap_values_test.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/baseline_results.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/models/baseline_results.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/surrogate_lgbm.joblib" beforeDir="false" afterPath="$PROJECT_DIR$/data/models/surrogate_lgbm.joblib" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/tabpfn.joblib" beforeDir="false" afterPath="$PROJECT_DIR$/data/models/tabpfn.joblib" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/correlation_heatmap.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/counterfactuals/cf_feature_analysis.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/counterfactuals/cf_feature_analysis.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/decision_all_samples.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/decision_sample_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/decision_sample_0.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/dependence_all_features.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/dependence_all_features.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/dependence_top_features.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/effects_high_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/effects_high_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/effects_low_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/effects_low_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/force_sample_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/force_sample_0.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/importance_high_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/importance_high_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/importance_low_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/importance_low_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/waterfall_sample_0.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/waterfall_sample_0.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap_vs_counterfactual.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap_vs_counterfactual.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/target_distribution.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -33,30 +63,35 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;webapp&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/joaquin/PycharmProjects/xai-postcovid-git&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-3bd3a6803838-JavaScript-PY-261.22158.340" />
-        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-PY-261.23567.174" />
+        <option value="bundled-python-sdk-024ed6589d45-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.23567.174" />
       </set>
     </attachedChunks>
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="60610e01-1414-4cce-9798-a84ad763360b" name="Changes" comment="" />
+      <changelist id="48d9501d-2bc3-4fac-8d9a-39ee4f61ed7f" name="Changes" comment="" />
       <created>1776523696995</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776523696995</updated>
       <workItem from="1776523698736" duration="2030000" />
+      <workItem from="1777518934063" duration="890000" />
+      <workItem from="1777519863590" duration="649000" />
     </task>
     <task id="LOCAL-00001" summary="chore: Renamed final implementation folder">
       <option name="closed" value="true" />
