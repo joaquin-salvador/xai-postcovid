@@ -6,9 +6,9 @@ from model import (
     build_person_options, get_prediction, build_profile_df,
 )
 
-
 # Template Explanations
-
+# The initial idea was to connect this to a LLM to generate dynamic explanations.
+# That costs moneyyyy so we'll go with templates instead :ok:
 def _explain_waterfall(sample_values, shap_vals, features, display_names,
                        category_labels, likert_features, class_names, pred_class):
     ranked = sorted(zip(features, shap_vals, [sample_values[f] for f in features]),
@@ -43,9 +43,7 @@ def _explain_global(shap_vals_class, features, display_names, class_name):
             "Features at the top have the strongest influence. "
             "See the *Feature Effects* tab for direction.")
 
-
 # Page Renderer
-
 def render_shap(model, X_explain, shap_values_test, shap_expected_value,
                 features, class_names, display_names, category_labels,
                 likert_features, precomputed_preds):
@@ -62,59 +60,89 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
 
     n_explained, n_features = len(X_explain), len(features)
     disp_names = [get_display_name(f, display_names) for f in features]
-    fig_h = max(4, n_features * 0.22)
+    fig_h = max(5, n_features * 0.28)
+
+    # Both Global Importance and Feature Effects focus on the High Loneliness
+    # medyo redundant kung both low and high ipapakita,,,
+    high_idx = 1
+    high_name = class_names[high_idx]
 
     tab1, tab2, tab3 = st.tabs([
-        "🌐 Global Feature Importance", "👤 Individual Explanation", "📈 Feature Effects"
+        "🌐 Global Feature Importance", "📈 Feature Effects", "👤 Individual Explanation"
     ])
 
     # Tab 1: Global Feature Importance
     with tab1:
-        st.subheader("Which features matter most overall?")
+        st.subheader(f"Which features matter most for predicting {high_name}?")
         st.markdown(
             f"Average importance across **{n_explained}** individuals. "
-            f"All **{n_features}** features shown side-by-side."
+            f"All **{n_features}** features shown for the **{high_name}** class. "
+            "The **top 5 most influential features are highlighted in red**."
         )
 
-        cols = st.columns(2)
-        for ci, col in enumerate(cols):
-            with col:
-                st.markdown(f"#### {class_names[ci]}")
-                mean_abs = np.abs(shap_values_test[ci]).mean(axis=0)
-                order = np.argsort(mean_abs)
-                names_s = [disp_names[i] for i in order]
-                vals_s = mean_abs[order]
-                colors = ["#d62728" if v >= 1.5 else "steelblue" for v in vals_s]
+        mean_abs = np.abs(shap_values_test[high_idx]).mean(axis=0)
+        order = np.argsort(mean_abs)
+        names_s = [disp_names[i] for i in order]
+        vals_s = mean_abs[order]
+        # Top 5 = the 5 largest mean(|SHAP|) values
+        n_top = 5
+        colors = (["steelblue"] * (len(vals_s) - n_top)) + (["#d62728"] * n_top)
 
-                fig, ax = plt.subplots(figsize=(5, fig_h))
-                ax.barh(names_s, vals_s, color=colors)
-                ax.set_xlabel("Mean(|SHAP|) value")
-                ax.set_title(class_names[ci])
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close()
+        fig, ax = plt.subplots(figsize=(8, fig_h))
+        ax.barh(names_s, vals_s, color=colors)
+        ax.set_xlabel("Mean(|SHAP|) value — impact on High Loneliness prediction")
+        ax.set_title(f"Global Feature Importance ({high_name})")
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close()
 
         with st.expander("📖 What does this mean?", expanded=True):
-            for ci in range(len(class_names)):
-                st.markdown(_explain_global(
-                    shap_values_test[ci], features, display_names, class_names[ci]))
-                if ci == 0:
-                    st.markdown("---")
+            st.markdown(_explain_global(
+                shap_values_test[high_idx], features, display_names, high_name))
 
         with st.expander("📐 Understanding SHAP Impact Values in Classification"):
             st.markdown(
                 "SHAP values represent contributions to the **log-odds**.\n\n"
                 "| Mean(\\|SHAP\\|) | Interpretation |\n|---|---|\n"
-                "| **≥ 1.5** | 🔴 Very strong — multiplies odds by ~4.5× |\n"
+                "| **≥ 1.5** | Very strong — multiplies odds by ~4.5× |\n"
                 "| **1.0–1.5** | Strong |\n| **0.5–1.0** | Moderate |\n"
                 "| **< 0.5** | Mild to weak |\n\n"
                 "A feature with impact **2.0** multiplies odds by ~**7.4×** vs ~**2.7×** "
                 "for impact **1.0** — the effect is exponential, not linear. "
-                "Red bars in the charts mark features ≥ 1.5."
+                "🔴 Red bars in the chart mark the top 5 most influential features."
             )
 
-    # Tab 2: Individual Explanation
+    # Tab 2: Feature Effects
     with tab2:
+        st.subheader(f"How do feature values push predictions toward {high_name}?")
+        st.markdown(
+            "Each dot is one person. "
+            "**Red dots** = high feature values, **blue** = low. "
+            "Dots on the right push toward **High Loneliness**; dots on "
+            "the left push toward Low Loneliness."
+        )
+
+        fig, _ = plt.subplots(figsize=(8, fig_h))
+        shap.summary_plot(shap_values_test[high_idx], X_explain,
+                          feature_names=disp_names, show=False,
+                          max_display=n_features)
+        plt.title(f"Feature Effects on {high_name} prediction")
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close()
+
+        with st.expander("📖 How to read this chart"):
+            st.markdown(
+                "- Each dot = one person\n"
+                "- **Horizontal**: how much the feature pushed the prediction "
+                "toward High Loneliness (right) or Low Loneliness (left)\n"
+                "- **Color**: feature value (red=high, blue=low)\n"
+                "- Red dots on the right → high values push toward High Loneliness\n"
+                "- Sorted by importance (top = most important)"
+            )
+
+    # Tab 3: Individual Explanation
+    with tab3:
         st.subheader("Why was this specific person classified this way?")
         st.markdown("Red bars push toward High Loneliness; blue toward Low.")
 
@@ -147,13 +175,15 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
             data=X_explain.iloc[sample_idx].values, feature_names=disp_names
         )
 
-        fig, ax = plt.subplots(figsize=(10, max(7, n_features * 0.3)))
+        fig, _ = plt.subplots(figsize=(10, max(7, n_features * 0.3)))
         shap.waterfall_plot(explanation, show=False, max_display=n_features)
         ax = plt.gca()
         ax.axvline(x=0, color="gray", linestyle="--", linewidth=1.0, alpha=0.7)
-        ax.text(0, -0.5, "← Low Loneliness | High Loneliness →",
-                ha="center", va="top", fontsize=8, color="gray",
-                transform=ax.get_xaxis_transform())
+        # Place the directional legend at the TOP of the plot (above the
+        # title) so the figure does not waste vertical space on an empty
+        # margin under the x-axis.
+        plt.suptitle("← Low Loneliness | High Loneliness →",
+                     fontsize=10, color="gray", y=1.0)
         plt.title(f"What influenced this prediction? (Person {sample_idx + 1})")
         plt.tight_layout()
         st.pyplot(fig)
@@ -166,33 +196,3 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
                 features, display_names, category_labels, likert_features,
                 class_names, pred
             ))
-
-    # Tab 3: Feature Effects
-    with tab3:
-        st.subheader("How do features affect predictions?")
-        st.markdown(
-            "**Red dots** = high feature values, **blue** = low. "
-            f"All **{n_features}** features, both classes side-by-side."
-        )
-
-        cols = st.columns(2)
-        for ci, col in enumerate(cols):
-            with col:
-                st.markdown(f"#### {class_names[ci]}")
-                fig, ax = plt.subplots(figsize=(5, fig_h))
-                shap.summary_plot(shap_values_test[ci], X_explain,
-                                  feature_names=disp_names, show=False,
-                                  max_display=n_features)
-                plt.title(class_names[ci])
-                plt.tight_layout()
-                st.pyplot(fig)
-                plt.close()
-
-        with st.expander("📖 How to read this chart"):
-            st.markdown(
-                "- Each dot = one person\n"
-                "- **Horizontal**: how much the feature pushed the prediction\n"
-                "- **Color**: feature value (red=high, blue=low)\n"
-                "- Red dots on the right → high values push toward this class\n"
-                "- Sorted by importance (top = most important)"
-            )

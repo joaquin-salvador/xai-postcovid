@@ -38,7 +38,6 @@ st.markdown("""
     white-space: normal !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
-    max-width: 300px;
 }
 
 /* Tab styling */
@@ -62,13 +61,16 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+# In unsafe HTML we trust
 
 def main():
     try:
         (model, surrogate, X_train, X_test, X_explain, y_train, y_test,
          shap_values_test, shap_expected_value, feature_info,
          precomputed_preds, precomputed_cfs,
-         precomputed_cfs_limited) = load_artifacts()
+         precomputed_cfs_limited,
+         precomputed_cfs_kdtree,
+         precomputed_cfs_genetic) = load_artifacts()
     except FileNotFoundError as e:
         st.error(
             "Could not load model artifacts. Please run the notebook first "
@@ -81,7 +83,7 @@ def main():
             "finalfinal_webapp/\n"
             "  data/\n"
             "    models/tabpfn.joblib\n"
-            "    models/surrogate_lgbm.joblib\n"
+            "    models/surrogate.joblib\n"
             "    explainers/shap_values_test.pkl\n"
             "    explainers/shap_expected_value.pkl\n"
             "    explainers/feature_info.pkl\n"
@@ -92,6 +94,7 @@ def main():
             "    artifacts/y_train.csv\n"
             "    artifacts/y_test.csv\n"
             "    artifacts/X_explain.csv\n"
+            "    artifacts/df_encoded.csv\n"
             "    artifacts/test_predictions.pkl\n"
             "```"
         )
@@ -112,21 +115,31 @@ def main():
 
     page = st.sidebar.radio("Navigate to:", [
         "📊 Model Overview",
+        "📈 EDA",
         "🔍 SHAP Explanations",
         "🔧 What-If Analysis",
         "🔄 Counterfactual Explorer",
     ])
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**📋 About the Model**")
+    st.sidebar.markdown("**📋 About the Project**")
     st.sidebar.markdown(f"- Primary model: `TabPFN`")
     if surrogate is not None:
         st.sidebar.markdown(f"- Surrogate: `{type(surrogate).__name__}` (TreeSHAP + What-If)")
     st.sidebar.markdown(f"- Features: **{len(features)}**")
     st.sidebar.markdown(f"- Test samples: **{len(X_test)}**")
     st.sidebar.markdown(f"- SHAP explained: **{len(X_explain)}** samples")
+    if precomputed_cfs_kdtree:
+        st.sidebar.markdown(
+            f"- KDTree CFs: **{len(precomputed_cfs_kdtree)}** samples  \n"
+            "  _(real training-set examples)_"
+        )
+    if precomputed_cfs_genetic:
+        st.sidebar.markdown(
+            f"- Genetic CFs: **{len(precomputed_cfs_genetic)}** samples"
+        )
     if precomputed_cfs:
-        st.sidebar.markdown(f"- Unrestricted CFs: **{len(precomputed_cfs)}** samples")
+        st.sidebar.markdown(f"- Random CFs: **{len(precomputed_cfs)}** samples")
     if precomputed_cfs_limited:
         immutable = feature_info.get("immutable_features", [])
         excluded = ", ".join(immutable) if immutable else "demographics"
@@ -146,6 +159,12 @@ def main():
     if page == "📊 Model Overview":
         from model import render_overview
         render_overview(model, X_test, y_test, class_names, precomputed_preds)
+    elif page == "📈 EDA":
+        from eda import render_eda, _load_encoded_dataset
+        df_encoded = _load_encoded_dataset()
+        target = feature_info.get("target", "UCLA_High")
+        render_eda(df_encoded, features, target, display_names,
+                   category_labels, likert_features, class_names)
     elif page == "🔍 SHAP Explanations":
         from shap_page import render_shap
         render_shap(model, X_explain, shap_values_test, shap_expected_value,
@@ -159,10 +178,12 @@ def main():
                       precomputed_preds)
     elif page == "🔄 Counterfactual Explorer":
         from counterfactual import render_counterfactuals
-        render_counterfactuals(model, X_test, y_test, features, class_names,
-                               feature_info, display_names, category_labels,
-                               likert_features, precomputed_cfs,
-                               precomputed_cfs_limited, precomputed_preds)
+        render_counterfactuals(model, X_train, X_test, y_train, y_test,
+                               features, class_names, feature_info,
+                               display_names, category_labels, likert_features,
+                               precomputed_cfs, precomputed_cfs_limited,
+                               precomputed_cfs_kdtree, precomputed_cfs_genetic,
+                               precomputed_preds)
 
 if __name__ == "__main__":
     main()

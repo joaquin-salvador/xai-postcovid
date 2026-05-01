@@ -2,12 +2,46 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="48d9501d-2bc3-4fac-8d9a-39ee4f61ed7f" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eda.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/counterfactual.py" beforeDir="false" afterPath="$PROJECT_DIR$/counterfactual.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cf_sample_indices.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/cf_sample_indices.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cfx_methods/cf_sample_indices.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cfx_methods/dice_genetic.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cfx_methods/dice_kdtree.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cfx_methods/dice_random.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/cfx_methods/method_comparison_summary.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/counterfactual_results.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/counterfactual_results.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/counterfactual_results_limited.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/counterfactual_results_limited.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/dice_results.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/dice_results.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/dice_results_limited.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/dice_results_limited.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/explainers/feature_info.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/data/explainers/feature_info.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/baseline_results.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/models/baseline_results.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/surrogate_lgbm.joblib" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/models/tabpfn.joblib" beforeDir="false" afterPath="$PROJECT_DIR$/data/models/tabpfn.joblib" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/counterfactuals/cf_feature_analysis.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/counterfactuals/cf_feature_analysis.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/counterfactuals/cf_limitations_comparison.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/counterfactuals/cf_limitations_comparison.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/counterfactuals/cfx_method_comparison.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/dependence_all_features.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/dependence_all_features.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/effects_high_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/effects_high_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/effects_low_loneliness.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap/effects_low_loneliness.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap/xai_method_correlation.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/plots/shap_vs_counterfactual.png" beforeDir="false" afterPath="$PROJECT_DIR$/data/plots/shap_vs_counterfactual.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shap_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/shap_page.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -46,6 +80,11 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -64,7 +103,14 @@
       <workItem from="1776523698736" duration="2030000" />
       <workItem from="1777518934063" duration="890000" />
       <workItem from="1777519863590" duration="649000" />
-      <workItem from="1777520785792" duration="11000" />
+      <workItem from="1777520785792" duration="372000" />
+      <workItem from="1777531188612" duration="23000" />
+      <workItem from="1777598228055" duration="1172000" />
+      <workItem from="1777600319838" duration="2611000" />
+      <workItem from="1777606197354" duration="11000" />
+      <workItem from="1777651945064" duration="643000" />
+      <workItem from="1777654659262" duration="2158000" />
+      <workItem from="1777659232418" duration="2002000" />
     </task>
     <task id="LOCAL-00001" summary="chore: Renamed final implementation folder">
       <option name="closed" value="true" />

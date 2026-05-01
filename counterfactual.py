@@ -31,6 +31,17 @@ COVID_FEATURES = ["Altruistic",
                   "Difficulty_Work"]
 
 # Helpers
+CHANGE_THRESHOLD = 0.01  # min |cf - orig| considered a "real" feature change
+
+
+def _is_changed(cf, orig, f, threshold=CHANGE_THRESHOLD):
+    return f in cf and f in orig and abs(cf[f] - orig[f]) > threshold
+
+
+def _disp_list(feats, display_names):
+    return ", ".join(get_display_name(f, display_names) for f in feats)
+
+
 def _change_direction(feat, cf_val, orig_val):
     """Return direction label: Change for categoricals, Increase/Decrease for others."""
     if feat in BINARY_FEATURES or feat in JOB_FEATURES:
@@ -149,8 +160,7 @@ def _explain_counterfactual(original_values, cf, features, display_names,
                             category_labels, likert_features, class_names, original_pred):
     target = class_names[1 - original_pred]
     changes = [(f, original_values[f], cf[f])
-               for f in features
-               if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01]
+               for f in features if _is_changed(cf, original_values, f)]
     if not changes:
         return "No significant changes were needed in this counterfactual scenario."
 
@@ -363,8 +373,7 @@ def _scenario_changes_table(cf, original_values, features, display_names,
         "Current": format_feature_value(f, original_values[f], category_labels, likert_features),
         "Needed": format_feature_value(f, cf[f], category_labels, likert_features),
         "Direction": _change_direction(f, cf[f], original_values[f]),
-    } for f in features
-      if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01]
+    } for f in features if _is_changed(cf, original_values, f)]
     return pd.DataFrame(rows)
 
 
@@ -373,45 +382,67 @@ def _check_immutable(cf, original_values, immutable_features):
     if not immutable_features:
         return []
     return [f for f in immutable_features
-            if f in cf and abs(cf[f] - original_values[f]) > 0.01]
+            if _is_changed(cf, original_values, f)]
 
 
 def _render_cf_set(cf_records, original_values, features, display_names,
                    category_labels, likert_features, class_names,
-                   original_pred, key_prefix, immutable_features=None):
-    """Render scenario navigator + change table + explanation + frequency chart for one CF set."""
+                   original_pred, key_prefix, immutable_features=None,
+                   mode="scenario", X_train=None, y_train=None):
+    """Render scenario navigator + change table + explanation + frequency chart."""
     if not cf_records:
         st.info("No counterfactuals available for this person in this set.")
         return
 
     if immutable_features:
-        immutable_disp = ", ".join(get_display_name(f, display_names) for f in immutable_features)
-        st.caption(f"🔒 These scenarios keep **{immutable_disp}** constant.")
+        st.caption(
+            f"🔒 These scenarios keep **{_disp_list(immutable_features, display_names)}** constant."
+        )
 
     n_scenarios = len(cf_records)
-    st.markdown(f"Found **{n_scenarios}** alternative scenario(s).")
 
+    # Navigator (prev/next + "Scenario X of N")
+    si_key = f"{key_prefix}_scenario_idx"
     if n_scenarios > 1:
-        si_key = f"{key_prefix}_scenario_idx"
         nav_l, nav_c, nav_r = st.columns([1, 3, 1])
         with nav_l:
-            if st.button("◀ Prev", key=f"{key_prefix}_prev", use_container_width=True):
+            if st.button("◀ Prev", key=f"{key_prefix}_prev",
+                         use_container_width=True):
                 st.session_state[si_key] = (
                     st.session_state.get(si_key, 0) - 1) % n_scenarios
         with nav_r:
-            if st.button("Next ▶", key=f"{key_prefix}_next", use_container_width=True):
+            if st.button("Next ▶", key=f"{key_prefix}_next",
+                         use_container_width=True):
                 st.session_state[si_key] = (
                     st.session_state.get(si_key, 0) + 1) % n_scenarios
         si = st.session_state.get(si_key, 0)
         with nav_c:
-            st.markdown(f"<div style='text-align:center;padding-top:5px;'>"
-                        f"<strong>Scenario {si+1} of {n_scenarios}</strong></div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='text-align:center;padding-top:5px;'>"
+                f"<strong>Scenario {si + 1} of {n_scenarios}</strong></div>",
+                unsafe_allow_html=True,
+            )
     else:
         si = 0
         st.markdown("**Scenario 1 of 1**")
 
     cf = cf_records[si]
+
+    # KDTree banner
+    src_idx = cf.get("source_train_idx") if mode == "kdtree" else None
+    if mode == "kdtree":
+        if src_idx is not None:
+            st.success(
+                f"Training row {src_idx} was used as the reference for this "
+                "counterfactual explanation."
+            )
+        else:
+            st.warning(
+                "Source training row could not be matched (likely DiCE "
+                "rounding); treat this CF as synthesized."
+            )
+
+    # Change table
     changes_df = _scenario_changes_table(
         cf, original_values, features, display_names, category_labels, likert_features)
 
@@ -421,11 +452,14 @@ def _render_cf_set(cf_records, original_values, features, display_names,
         violations = _check_immutable(cf, original_values, immutable_features)
         if immutable_features:
             if violations:
-                viol_disp = ", ".join(get_display_name(f, display_names) for f in violations)
-                st.error(f"⚠️ Constraint violation — immutable feature(s) changed: {viol_disp}")
+                st.error(
+                    "⚠️ Constraint violation — immutable feature(s) changed: "
+                    f"{_disp_list(violations, display_names)}"
+                )
             else:
-                imm_disp = ", ".join(get_display_name(f, display_names) for f in immutable_features)
-                st.success(f"✓ Constraint satisfied: {imm_disp} held constant.")
+                st.success(
+                    f"✓ Constraint satisfied: {_disp_list(immutable_features, display_names)} held constant."
+                )
 
         st.markdown("---")
         st.markdown(_explain_counterfactual(
@@ -433,6 +467,42 @@ def _render_cf_set(cf_records, original_values, features, display_names,
             category_labels, likert_features, class_names, original_pred))
     else:
         st.info("No significant changes in this scenario.")
+
+    # KDTree-only: full profile of the source training row
+    if mode == "kdtree" and X_train is not None and src_idx is not None:
+        try:
+            src_row = X_train.iloc[int(src_idx)]
+        except (IndexError, KeyError):
+            src_row = None
+
+        # Look up the actual training-set label in y_train
+        src_label_str = None
+        if y_train is not None:
+            try:
+                src_label_int = int(y_train.iloc[int(src_idx)])
+                src_label_str = class_names[src_label_int]
+            except (IndexError, ValueError, KeyError):
+                src_label_str = None
+        if src_label_str is None:
+            src_label_str = class_names[1 - original_pred]
+
+        if src_row is not None:
+            st.markdown("---")
+            st.markdown(f"#### 📋 Full profile of training row {src_idx}")
+            st.markdown(
+                f"🎯 **Classification in the training set:** **{src_label_str}**"
+            )
+            st.caption(
+                "This is the actual row from `X_train` that DiCE returned as "
+                "the counterfactual. The change table above shows how this "
+                "person differs from the test instance you selected; the "
+                "table below is their full profile."
+            )
+            st.dataframe(
+                build_profile_df(src_row, features, display_names,
+                                 category_labels, likert_features),
+                width="stretch", hide_index=True,
+            )
 
     if n_scenarios > 1:
         _render_frequency_chart(cf_records, original_values, features,
@@ -449,7 +519,7 @@ def _render_frequency_chart(cf_records, original_values, features,
     feat_counts = {}
     for cf in cf_records:
         for f in features:
-            if f in cf and f in original_values and abs(cf[f] - original_values[f]) > 0.01:
+            if _is_changed(cf, original_values, f):
                 dname = get_display_name(f, display_names)
                 feat_counts[dname] = feat_counts.get(dname, 0) + 1
 
@@ -467,15 +537,244 @@ def _render_frequency_chart(cf_records, original_values, features,
     st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_freq_chart")
 
 
+# Aggregate evaluation across CF methods (mirrors notebook §4.6)
+METHOD_COLORS = {
+    "KDTree": "#7209b7",
+    "Genetic": "#f72585",
+    "Random": "#4361ee",
+    "Demographics-Excluded": "#fb8500",
+}
+
+
+def _aggregate_method_metrics(cfs_dict, X_test, features):
+    """Compute validity / sparsity / proximity / diversity for one method's CFs."""
+    n_samples = len(cfs_dict)
+    n_with_valid = sum(1 for cfs in cfs_dict.values() if cfs)
+    sparsities, proximities, diversities = [], [], []
+    n_total = 0
+
+    for sample_idx, cfs in cfs_dict.items():
+        if not cfs:
+            continue
+        try:
+            orig = X_test.iloc[int(sample_idx)]
+        except (IndexError, KeyError):
+            continue
+        n_total += len(cfs)
+        for cf in cfs:
+            diffs = [abs(cf[f] - orig[f]) for f in features if f in cf]
+            sparsities.append(sum(1 for d in diffs if d > CHANGE_THRESHOLD))
+            proximities.append(sum(diffs))
+        if len(cfs) > 1:
+            pairs = []
+            for i in range(len(cfs)):
+                for j in range(i + 1, len(cfs)):
+                    pairs.append(sum(
+                        abs(cfs[i][f] - cfs[j][f])
+                        for f in features
+                        if f in cfs[i] and f in cfs[j]
+                    ))
+            diversities.append(float(np.mean(pairs)))
+
+    return {
+        "Validity": n_with_valid / n_samples if n_samples else float("nan"),
+        "Total CFs": n_total,
+        "Avg CFs / valid sample": (n_total / n_with_valid) if n_with_valid else float("nan"),
+        "Avg Sparsity": float(np.mean(sparsities)) if sparsities else float("nan"),
+        "Avg Proximity": float(np.mean(proximities)) if proximities else float("nan"),
+        "Avg Diversity": float(np.mean(diversities)) if diversities else float("nan"),
+    }
+
+
+def _render_method_evaluation(cf_dicts, X_test, features, display_names):
+    """Aggregate per-method evaluation panel"""
+    methods_data = {m: d for m, d in cf_dicts.items() if d}
+    if len(methods_data) < 2:
+        # Nothing meaningful to compare with fewer than two methods present haha
+        return
+
+    px, _ = _import_plotly()
+
+    st.markdown("---")
+    st.header("📊 Method Evaluation (Aggregate Across All Samples)")
+    st.markdown(
+        "How the loaded CF methods compare on:\n\n"
+        "- **Validity** — fraction of samples with at least one valid CF "
+        "(higher is better)\n"
+        "- **Sparsity** — number of features changed per CF "
+        "(lower is better; sparser = simpler explanation)\n"
+        "- **Proximity** — L1 distance from the original instance "
+        "(lower is better; closer = smaller intervention)\n"
+        "- **Diversity** — average pairwise L1 distance between the "
+        "CFs returned for the same input (higher = more variety)\n"
+        "- **Plausibility** — KDTree CFs are real training rows; "
+        "Random and Genetic CFs are synthesized"
+    )
+
+    # Aggregate metrics table
+    summaries = []
+    for method, cfs_dict in methods_data.items():
+        m = _aggregate_method_metrics(cfs_dict, X_test, features)
+        m["Method"] = method
+        m["Plausibility"] = (
+            "real training rows" if method == "KDTree" else "synthesized"
+        )
+        summaries.append(m)
+
+    df_compare = pd.DataFrame(summaries).set_index("Method")[
+        ["Validity", "Total CFs", "Avg CFs / valid sample",
+         "Avg Sparsity", "Avg Proximity", "Avg Diversity", "Plausibility"]
+    ]
+    st.subheader("Aggregate metrics")
+    st.dataframe(df_compare.round(3), width="stretch")
+
+    # Bar charts
+    metrics = [
+        ("Validity", "higher is better"),
+        ("Avg Sparsity", "lower is better"),
+        ("Avg Proximity", "lower is better"),
+        ("Avg Diversity", "higher is better"),
+    ]
+    rows = [metrics[:2], metrics[2:]]
+    for row in rows:
+        cols = st.columns(2)
+        for col, (metric, hint) in zip(cols, row):
+            with col:
+                df_metric = df_compare[[metric]].reset_index()
+                fig = px.bar(
+                    df_metric, x="Method", y=metric,
+                    color="Method", text_auto=".3f",
+                    color_discrete_map=METHOD_COLORS,
+                    title=f"{metric} ({hint})",
+                )
+                fig.update_layout(showlegend=False, height=320,
+                                  margin=dict(t=40, b=20, l=20, r=20))
+                st.plotly_chart(fig, width="stretch",
+                                key=f"eval_bar_{metric}")
+
+    # Per-feature change frequency, grouped by method
+    st.subheader("Per-feature change frequency by method")
+    st.caption(
+        "Which features does each method tend to touch? Long parallel "
+        "bars mean methods agree; large differences mean a method has "
+        "its own preferred set of edits."
+    )
+    feat_count_data = {}
+    for method, cfs_dict in methods_data.items():
+        counts = {f: 0 for f in features}
+        for sample_idx, cfs in cfs_dict.items():
+            try:
+                orig = X_test.iloc[int(sample_idx)]
+            except (IndexError, KeyError):
+                continue
+            for cf in cfs:
+                for f in features:
+                    if _is_changed(cf, orig, f):
+                        counts[f] += 1
+        feat_count_data[method] = counts
+
+    feat_df = pd.DataFrame(feat_count_data)
+    feat_df["Display Name"] = [
+        get_display_name(f, display_names) for f in feat_df.index
+    ]
+    method_cols = [c for c in feat_df.columns if c != "Display Name"]
+    feat_df = feat_df.sort_values(method_cols[0], ascending=True)
+
+    melted = feat_df.reset_index().melt(
+        id_vars=["index", "Display Name"],
+        value_vars=method_cols,
+        var_name="Method", value_name="Times Changed",
+    )
+    fig = px.bar(
+        melted, x="Times Changed", y="Display Name",
+        color="Method", barmode="group", orientation="h",
+        color_discrete_map=METHOD_COLORS,
+        height=max(500, len(feat_df) * 30),
+    )
+    fig.update_layout(yaxis_title="")
+    st.plotly_chart(fig, width="stretch", key="eval_feat_freq")
+
+    # Spearman rank correlation between methods
+    if len(method_cols) > 1:
+        try:
+            from scipy.stats import spearmanr
+        except ImportError:
+            spearmanr = None
+        if spearmanr is not None:
+            st.subheader("Inter-method agreement (Spearman ρ)")
+            st.caption(
+                "Do the methods agree on which features matter? 1.0 means "
+                "identical feature-change rankings; 0.0 means independent."
+            )
+            corr = pd.DataFrame(index=method_cols, columns=method_cols,
+                                dtype=float)
+            for m1 in method_cols:
+                for m2 in method_cols:
+                    rho, _ = spearmanr(feat_df[m1], feat_df[m2])
+                    corr.loc[m1, m2] = rho
+            st.dataframe(corr.round(3), width="stretch")
+
+    # Per-criterion winners
+    st.subheader("Best method per criterion")
+    winners = {
+        "Validity": df_compare["Validity"].idxmax(),
+        "Sparsity": df_compare["Avg Sparsity"].idxmin(),
+        "Proximity": df_compare["Avg Proximity"].idxmin(),
+        "Diversity": df_compare["Avg Diversity"].idxmax(),
+    }
+    cols = st.columns(len(winners))
+    for col, (criterion, winner) in zip(cols, winners.items()):
+        col.metric(criterion, winner)
+
+    # Trade-offs
+    with st.expander("📖 Trade-offs", expanded=False):
+        st.markdown(
+            "All three CF methods reached **100% validity** on the "
+            "evaluation sample — every input got at least one valid CF — "
+            "so the comparison comes down to the shape of the explanation:\n\n"
+            "- **🎲 Random** perturbs the original instance until the "
+            "prediction flips. In our experiment it produced the "
+            "**sparsest** CFs by a wide margin (≈3.4 features changed per "
+            "CF, vs ≈10–12 for the other methods), making each CF the "
+            "easiest to read. The trade-off is plausibility: the "
+            "perturbations are synthetic and may land on combinations "
+            "that don't exist in any real respondent.\n"
+            "- **🌳 KDTree** returns *real* training people who are already "
+            "classified in the desired class, so every CF is guaranteed "
+            "plausible. In our experiment it also achieved the **lowest "
+            "proximity** (≈20.2 L1 distance), meaning the matched real "
+            "neighbours were closer to the original instance than the "
+            "synthetic CFs from the other methods. The cost is sparsity — "
+            "real neighbours differ on many features at once — and "
+            "diversity, since the candidate pool is bounded by `X_train`.\n"
+            "- **🧬 Genetic** evolves a population of CFs toward valid, "
+            "low-cost solutions. In our experiment it produced the **most "
+            "diverse** CFs (≈24.9 average pairwise L1 distance) — useful "
+            "when you want to show a range of distinct routes to the same "
+            "outcome — at the cost of run-time and slightly higher "
+            "proximity than KDTree.\n"
+            "- **🔒 Demographics-Excluded** is Random with `Age` and "
+            "`Sex_Male` held constant — useful when the explanation has "
+            "to be actionable for the individual.\n\n"
+            "**Method agreement.** Spearman rank correlation on per-feature "
+            "change frequency was very high between **KDTree ↔ Genetic "
+            "(ρ ≈ 0.99)** and moderate for Random against the other two "
+            "(ρ ≈ 0.62–0.64): all three methods touch a similar core set "
+            "of features, but Random distributes the edits differently."
+        )
+
+
 # Counterfactual Explorer
-def render_counterfactuals(model, X_test, y_test, features, class_names,
-                           feature_info, display_names, category_labels,
-                           likert_features, precomputed_cfs,
-                           precomputed_cfs_limited, precomputed_preds):
+def render_counterfactuals(model, X_train, X_test, y_train, y_test, features,
+                           class_names, feature_info, display_names,
+                           category_labels, likert_features, precomputed_cfs,
+                           precomputed_cfs_limited,
+                           precomputed_cfs_kdtree,
+                           precomputed_cfs_genetic,
+                           precomputed_preds):
     st.title("🔄 Counterfactual Explorer")
 
     immutable_features = feature_info.get("immutable_features", []) or []
-    immutable_disp = [get_display_name(f, display_names) for f in immutable_features]
 
     st.info(
         "Counterfactual explanations answer: **\"What would need to change for this "
@@ -483,41 +782,54 @@ def render_counterfactuals(model, X_test, y_test, features, class_names,
         "to flip the model's decision."
     )
 
-    has_unr = bool(precomputed_cfs)
-    has_lim = bool(precomputed_cfs_limited)
+    # Single source of truth for the four CF methods.
+    immut_disp_str = _disp_list(immutable_features, display_names)
+    methods = [
+        # (key, dict, tab label, summary noun, key_prefix, mode, description, immutable_features for this method)
+        ("kdtree", precomputed_cfs_kdtree, "🌳 KDTree", "kdtree", "kdt",
+         "kdtree",
+         "**🌳 KDTree** — DiCE returns *real training-set rows* of the "
+         "desired class. Each CF below points back to the actual person "
+         "in `X_train` it came from.",
+         None),
+        ("genetic", precomputed_cfs_genetic, "🧬 Genetic", "genetic", "gen",
+         "scenario",
+         "**🧬 Genetic** — evolutionary search over CF candidates. "
+         "Synthetic like Random, but the search prefers low-cost, valid CFs.",
+         None),
+        ("random", precomputed_cfs, "🎲 Random", "random", "rnd",
+         "scenario",
+         "**🎲 Random** — DiCE perturbs the original instance until the "
+         "prediction flips. CFs are *synthetic* (new points in feature space).",
+         None),
+        ("lim", precomputed_cfs_limited, "🔒 Demographics-Excluded",
+         "demographics-excluded", "lim", "scenario",
+         (f"**🔒 Demographics-Excluded** — random method, but "
+          f"**{immut_disp_str}** are held constant so the suggested changes "
+          "are actionable.") if immutable_features else None,
+         immutable_features),
+    ]
+    methods = [m for m in methods if m[1]]  # only methods with data
 
-    if has_unr and has_lim and immutable_features:
-        st.markdown(
-            "Two counterfactual sets are available:\n\n"
-            "- **🔓 Unrestricted** — every feature is free to change.\n"
-            f"- **🔒 Demographics-Excluded** — keeps **{', '.join(immutable_disp)}** fixed, "
-            "so the suggested changes are actionable for the individual."
-        )
-    elif has_lim and immutable_features:
-        st.markdown(
-            f"Counterfactuals shown keep **{', '.join(immutable_disp)}** fixed."
-        )
-
-    available_unr = sorted(precomputed_cfs.keys()) if has_unr else []
-    available_lim = sorted(precomputed_cfs_limited.keys()) if has_lim else []
-    available = sorted(set(available_unr) | set(available_lim))
-
-    if not available:
+    if not methods:
         st.warning("No pre-computed counterfactuals found. Run the notebook first.")
         return
 
-    parts = []
-    if has_unr:
-        parts.append(f"**{len(available_unr)}** unrestricted")
-    if has_lim:
-        parts.append(f"**{len(available_lim)}** demographics-excluded")
+    descriptions = [f"- {m[6]}" for m in methods if m[6]]
+    if descriptions:
+        st.markdown("**Methods available below:**\n\n" + "\n".join(descriptions))
+
+    available_per_method = {m[0]: sorted(m[1].keys()) for m in methods}
+    available = sorted(set().union(*available_per_method.values()))
+
+    parts = [f"**{len(available_per_method[m[0]])}** {m[3]}" for m in methods]
     st.success(
-        f"Loaded {' and '.join(parts)} CF scenario set(s) "
+        f"Loaded {' / '.join(parts)} CF set(s) "
         f"covering {len(available)} unique persons."
     )
 
     sample_idx = st.selectbox(
-        "Select a person:",
+        "Basis point (index in test set):",
         available,
         format_func=lambda x: build_person_label(
             x, X_test.iloc[x], class_names, precomputed_preds),
@@ -550,42 +862,36 @@ def render_counterfactuals(model, X_test, y_test, features, class_names,
                     f"{format_feature_value(f, float(original_values[f]), category_labels, likert_features)}"
                 )
         st.markdown("**CF availability for this person**")
-        if has_unr:
-            mark = "✅" if sample_idx in available_unr else "—"
-            st.markdown(f"- {mark} Unrestricted")
-        if has_lim:
-            mark = "✅" if sample_idx in available_lim else "—"
-            st.markdown(f"- {mark} Demographics-Excluded")
+        for m in methods:
+            mark = "✅" if sample_idx in available_per_method[m[0]] else "—"
+            label = m[2].split(" ", 1)[1] if " " in m[2] else m[2]
+            st.markdown(f"- {mark} {label}")
 
     st.markdown("---")
 
-    tab_labels = []
-    if has_unr:
-        tab_labels.append("🔓 Unrestricted")
-    if has_lim:
-        tab_labels.append("🔒 Demographics-Excluded")
-
-    tabs = st.tabs(tab_labels)
-    ti = 0
-
-    if has_unr:
-        with tabs[ti]:
+    tabs = st.tabs([m[2] for m in methods])
+    for tab, (key, cf_dict, _label, _noun, key_prefix, mode, _desc, imm) in zip(tabs, methods):
+        with tab:
+            extra = {"X_train": X_train, "y_train": y_train} if mode == "kdtree" else {}
             _render_cf_set(
-                precomputed_cfs.get(sample_idx),
+                cf_dict.get(sample_idx),
                 original_values, features, display_names,
                 category_labels, likert_features, class_names,
-                original_pred, key_prefix="unr",
-                immutable_features=None,
+                original_pred, key_prefix=key_prefix,
+                immutable_features=imm,
+                mode=mode,
+                **extra,
             )
-        ti += 1
 
-    if has_lim:
-        with tabs[ti]:
-            _render_cf_set(
-                precomputed_cfs_limited.get(sample_idx),
-                original_values, features, display_names,
-                category_labels, likert_features, class_names,
-                original_pred, key_prefix="lim",
-                immutable_features=immutable_features,
-            )
-        ti += 1
+    # Aggregate method evaluation
+    _render_method_evaluation(
+        cf_dicts={
+            "KDTree": precomputed_cfs_kdtree,
+            "Genetic": precomputed_cfs_genetic,
+            "Random": precomputed_cfs,
+            "Demographics-Excluded": precomputed_cfs_limited,
+        },
+        X_test=X_test,
+        features=features,
+        display_names=display_names,
+    )

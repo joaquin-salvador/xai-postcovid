@@ -4,7 +4,6 @@ import numpy as np
 import os
 import pickle
 
-
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -112,9 +111,7 @@ JOB_OPTIONS = {
     "Job_Other": "Other",
 }
 
-
 # Lazy imports
-
 def _import_shap():
     import shap
     return shap
@@ -128,9 +125,7 @@ def _import_plotly():
     import plotly.figure_factory as ff
     return px, ff
 
-
 # Helpers
-
 def get_display_name(feat, display_names):
     return display_names.get(feat, feat.replace("_", " "))
 
@@ -188,20 +183,18 @@ def build_profile_df(X_row, features, display_names, category_labels,
         rows.append(entry)
     return pd.DataFrame(rows)
 
-
 # Data Loading
-
 @st.cache_resource
 def load_artifacts():
     """Load all saved model and explainer artifacts."""
     import joblib
 
-    # Use surrogate model as the primary model (CPU-friendly)
-    model_path = os.path.join(MODELS_DIR, "surrogate_lgbm.joblib")
+    # Use surrogate model as the primary model (CPU-friendly!!!!!!!!!)
+    model_path = os.path.join(MODELS_DIR, "surrogate.joblib")
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(
-            f"surrogate_lgbm.joblib not found in {MODELS_DIR}. "
+            f"surrogate.joblib not found in {MODELS_DIR}. "
             "Make sure you exported it from your notebook."
         )
 
@@ -261,14 +254,20 @@ def load_artifacts():
     precomputed_cfs_limited = _load_cf_dict(
         ["counterfactual_results_limited.pkl", "dice_results_limited.pkl"]
     )
+    precomputed_cfs_kdtree = _load_cf_dict(
+        ["counterfactual_results_kdtree.pkl", "dice_results_kdtree.pkl"]
+    )
+    precomputed_cfs_genetic = _load_cf_dict(
+        ["counterfactual_results_genetic.pkl", "dice_results_genetic.pkl"]
+    )
 
     return (model, surrogate, X_train, X_test, X_explain, y_train, y_test,
             shap_values_test, shap_expected_value, feature_info,
-            precomputed_preds, precomputed_cfs, precomputed_cfs_limited)
+            precomputed_preds, precomputed_cfs, precomputed_cfs_limited,
+            precomputed_cfs_kdtree, precomputed_cfs_genetic)
 
 
 # Model Overview Page
-
 def render_overview(model, X_test, y_test, class_names, precomputed_preds):
     px, ff = _import_plotly()
     from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix

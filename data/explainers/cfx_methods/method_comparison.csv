@@ -1,0 +1,4 @@
+Method,Validity,Total CFs,Avg CFs / valid sample,Avg Sparsity,Avg Proximity,Avg Diversity,Plausibility
+Random,1.0,300,5.0,3.3833333333333333,25.723333333333333,22.116666666666667,synthesized
+KDTree,1.0,300,5.0,11.736666666666666,20.18,19.513333333333332,real training rows
+Genetic,1.0,297,4.95,10.27946127946128,24.939393939393938,24.931111111111115,synthesized
