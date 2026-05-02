@@ -1,0 +1,16 @@
+# Forces the dashboard to always render in light mode 
+
+[theme]
+base = "light"
+primaryColor = "#667eea"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+[client]
+# "viewer" hides the Settings dialog
+toolbarMode = "viewer"
+
+[browser]
+gatherUsageStats = false

@@ -33,6 +33,18 @@ COVID_FEATURES = ["Altruistic",
 # Helpers
 CHANGE_THRESHOLD = 0.01  # min |cf - orig| considered a "real" feature change
 
+# Longitudinal-survey layout: the encoded dataset is laid out wave-by-wave,
+# 2,659 unique respondents per phase. So a row index `i` in the training
+# table maps to person (i % N_PEOPLE) + 1 in phase (i // N_PEOPLE) + 1.
+N_PEOPLE_PER_PHASE = 2659
+
+
+def _person_phase_from_train_idx(idx):
+    """Decode a training-row index into a (person_id, phase) pair."""
+    person_id = int(idx) % N_PEOPLE_PER_PHASE + 1
+    phase = int(idx) // N_PEOPLE_PER_PHASE + 1
+    return person_id, phase
+
 
 def _is_changed(cf, orig, f, threshold=CHANGE_THRESHOLD):
     return f in cf and f in orig and abs(cf[f] - orig[f]) > threshold
@@ -432,9 +444,10 @@ def _render_cf_set(cf_records, original_values, features, display_names,
     src_idx = cf.get("source_train_idx") if mode == "kdtree" else None
     if mode == "kdtree":
         if src_idx is not None:
+            person_id, phase = _person_phase_from_train_idx(src_idx)
             st.success(
-                f"Training row {src_idx} was used as the reference for this "
-                "counterfactual explanation."
+                f"Person {person_id} (Phase {phase}) was used as the "
+                "reference for this counterfactual explanation."
             )
         else:
             st.warning(
@@ -487,8 +500,11 @@ def _render_cf_set(cf_records, original_values, features, display_names,
             src_label_str = class_names[1 - original_pred]
 
         if src_row is not None:
+            person_id, phase = _person_phase_from_train_idx(src_idx)
             st.markdown("---")
-            st.markdown(f"#### 📋 Full profile of training row {src_idx}")
+            st.markdown(
+                f"#### 📋 Full profile of Person {person_id} (Phase {phase})"
+            )
             st.markdown(
                 f"🎯 **Classification in the training set:** **{src_label_str}**"
             )

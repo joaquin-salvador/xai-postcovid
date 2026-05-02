@@ -16,6 +16,119 @@ PHASE_PALETTE = {
     4: "#fb8500",
 }
 
+# Wave-by-wave participant counts from the original longitudinal survey.
+# (Used to build the Sankey diagram at the top of the EDA page.)
+WAVE_INFO = [
+    {"phase": 1, "year": 2020, "dates": "May 11–12, 2020",   "n": 6723},
+    {"phase": 2, "year": 2021, "dates": "June 14–20, 2021",  "n": 4592},
+    {"phase": 3, "year": 2022, "dates": "May 13–30, 2022",   "n": 3892},
+    {"phase": 4, "year": 2024, "dates": "May 10–17, 2024",   "n": 2659},
+]
+DROPOUT_COLOR = "#9aa0a6"
+
+
+def _hex_to_rgba(hex_color, alpha):
+    """Convert a #RRGGBB string into an rgba(r,g,b,a) string Plotly accepts."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def _build_wave_sankey():
+    """Return a plotly Sankey figure illustrating drop-off across the four waves."""
+    import plotly.graph_objects as go
+
+    # Node order: [P1, P2, P3, P4, Dropped after P1, Dropped after P2, Dropped after P3]
+    node_labels = [
+        f"Phase 1 ({WAVE_INFO[0]['year']})\n{WAVE_INFO[0]['n']:,}",
+        f"Phase 2 ({WAVE_INFO[1]['year']})\n{WAVE_INFO[1]['n']:,}",
+        f"Phase 3 ({WAVE_INFO[2]['year']})\n{WAVE_INFO[2]['n']:,}",
+        f"Phase 4 ({WAVE_INFO[3]['year']})\n{WAVE_INFO[3]['n']:,}",
+        "No response after Phase 1",
+        "No response after Phase 2",
+        "No response after Phase 3",
+    ]
+    node_colors = [
+        PHASE_PALETTE[1], PHASE_PALETTE[2],
+        PHASE_PALETTE[3], PHASE_PALETTE[4],
+        DROPOUT_COLOR, DROPOUT_COLOR, DROPOUT_COLOR,
+    ]
+
+    # Per-wave drop-out counts (from the survey design)
+    drop_p1_p2 = WAVE_INFO[0]["n"] - WAVE_INFO[1]["n"]   # 6723 - 4592 = 2131
+    drop_p2_p3 = WAVE_INFO[1]["n"] - WAVE_INFO[2]["n"]   # 4592 - 3892 = 700
+    drop_p3_p4 = WAVE_INFO[2]["n"] - WAVE_INFO[3]["n"]   # 3892 - 2659 = 1233
+
+    sources = [0, 0, 1, 1, 2, 2]
+    targets = [1, 4, 2, 5, 3, 6]
+    values = [
+        WAVE_INFO[1]["n"], drop_p1_p2,
+        WAVE_INFO[2]["n"], drop_p2_p3,
+        WAVE_INFO[3]["n"], drop_p3_p4,
+    ]
+    flow_alpha = 0.55
+    drop_alpha = 0.45
+    link_colors = [
+        _hex_to_rgba(PHASE_PALETTE[2], flow_alpha),
+        _hex_to_rgba(DROPOUT_COLOR,    drop_alpha),
+        _hex_to_rgba(PHASE_PALETTE[3], flow_alpha),
+        _hex_to_rgba(DROPOUT_COLOR,    drop_alpha),
+        _hex_to_rgba(PHASE_PALETTE[4], flow_alpha),
+        _hex_to_rgba(DROPOUT_COLOR,    drop_alpha),
+    ]
+
+    outline_shadow = (
+        "-1px -1px 0 black, 1px -1px 0 black, "
+        "-1px 1px 0 black, 1px 1px 0 black"
+    )
+    fig = go.Figure(go.Sankey(
+        arrangement="snap",
+        textfont=dict(
+            color="white", size=13, weight="bold",
+            shadow=outline_shadow,
+        ),
+        node=dict(
+            pad=20, thickness=22,
+            line=dict(color="white", width=0.5),
+            label=node_labels, color=node_colors,
+        ),
+        link=dict(
+            source=sources, target=targets, value=values,
+            color=link_colors,
+        ),
+    ))
+    fig.update_layout(
+        title="Survey waves: how respondents flow across the four phases",
+        font_size=12, height=420,
+        margin=dict(l=10, r=10, t=60, b=10),
+    )
+    return fig
+
+
+def _render_wave_sankey():
+    """Render the Sankey diagram at the top of the EDA page."""
+    st.subheader("🌊 Longitudinal survey: participant flow across waves")
+    st.caption(
+        "The dataset comes from a four-wave longitudinal survey of "
+        "respondents in Tokyo, Osaka, Hyogo, and Fukuoka. The Sankey "
+        "diagram traces how many respondents continued from one wave "
+        "to the next and how many dropped out at each step."
+    )
+    st.plotly_chart(_build_wave_sankey(), width="stretch")
+    wave_table = pd.DataFrame([
+        {
+            "Phase": f"Phase {w['phase']} ({w['year']})",
+            "Field period": w["dates"],
+            "Participants (n)": f"{w['n']:,}",
+            "Lost since previous wave":
+                "—" if i == 0
+                else f"{WAVE_INFO[i-1]['n'] - w['n']:,}",
+        }
+        for i, w in enumerate(WAVE_INFO)
+    ])
+    with st.expander("📋 Wave-by-wave participant counts", expanded=False):
+        st.table(_centered(wave_table.set_index("Phase"), precision=0))
+
 
 @st.cache_data
 def _load_encoded_dataset():
@@ -50,6 +163,12 @@ def render_eda(df_encoded, features, target, display_names,
     px, _ = _import_plotly()
 
     st.title("📈 Exploratory Data Analysis")
+
+    # Sankey diagram of survey-wave flow — sits at the top of the page so
+    # readers see the longitudinal design before drilling into features.
+    _render_wave_sankey()
+    st.markdown("---")
+
     st.info(
         "How does each feature's distribution shift across the four "
         "longitudinal survey waves? Each phase corresponds to a year: "
@@ -95,51 +214,94 @@ def render_eda(df_encoded, features, target, display_names,
     # Tab 1 — overview: per-feature mean trend across phases
     # =================================================================
     with tab_overview:
-        st.subheader("Per-feature mean across phases")
+        st.subheader("Per-feature mean ± 1 std across phases")
         st.caption(
-            "Each panel shows one feature's mean per phase. Watch for "
-            "shifts that line up with COVID milestones (lockdowns, "
-            "reopenings)."
+            "Each panel shows one feature's **mean per phase** (line) with a "
+            "**±1 standard-deviation band** shaded around it to illustrate "
+            "the variance within each wave. Watch for shifts that line up "
+            "with COVID milestones (lockdowns, reopenings)."
         )
 
         mean_by_phase = (
             df_encoded.groupby("Phase")[features].mean().T
         )
-        mean_by_phase.columns = [_phase_label(p) for p in mean_by_phase.columns]
+        std_by_phase = (
+            df_encoded.groupby("Phase")[features].std().T
+        )
+        phase_cols_raw = list(mean_by_phase.columns)  # e.g. [1, 2, 3, 4]
+        phase_labels = [_phase_label(p) for p in phase_cols_raw]
+        mean_by_phase.columns = phase_labels
+        std_by_phase.columns = phase_labels
         mean_by_phase.index.name = "Feature"
         mean_by_phase["Display Name"] = [
             get_display_name(f, display_names) for f in mean_by_phase.index
         ]
 
-        long_df = mean_by_phase.reset_index().melt(
-            id_vars=["Feature", "Display Name"],
-            value_vars=[c for c in mean_by_phase.columns if c.startswith("Phase ")],
-            var_name="Phase", value_name="Mean",
-        )
+        # Layer shaded standard deviation
+        from plotly.subplots import make_subplots
+        import plotly.graph_objects as go
 
-        fig = px.line(
-            long_df, x="Phase", y="Mean",
-            facet_col="Display Name", facet_col_wrap=4,
-            markers=True,
-            color_discrete_sequence=["steelblue"],
-            height=140 * ((len(features) + 3) // 4),
+        n_features = len(features)
+        n_cols = 4
+        n_rows = (n_features + n_cols - 1) // n_cols
+        subplot_titles = [
+            get_display_name(f, display_names) for f in features
+        ]
+        fig = make_subplots(
+            rows=n_rows, cols=n_cols,
+            subplot_titles=subplot_titles,
+            horizontal_spacing=0.06, vertical_spacing=0.10,
         )
-        fig.update_layout(showlegend=False, margin=dict(t=40, b=20))
-        fig.for_each_annotation(lambda a: a.update(
-            text=a.text.split("=")[-1], font_size=10))
-        fig.for_each_yaxis(lambda y: y.update(matches=None,
-                                              showticklabels=True,
-                                              tickfont=dict(size=8)))
-        fig.for_each_xaxis(lambda x: x.update(tickfont=dict(size=7)))
+        for i, feat in enumerate(features):
+            r, c = i // n_cols + 1, i % n_cols + 1
+            means = [float(mean_by_phase.loc[feat, lbl]) for lbl in phase_labels]
+            stds = [float(std_by_phase.loc[feat, lbl]) for lbl in phase_labels]
+            upper = [m + s for m, s in zip(means, stds)]
+            lower = [m - s for m, s in zip(means, stds)]
+            # Shaded band
+            fig.add_trace(go.Scatter(
+                x=phase_labels, y=upper, mode="lines",
+                line=dict(width=0), hoverinfo="skip", showlegend=False,
+            ), row=r, col=c)
+            fig.add_trace(go.Scatter(
+                x=phase_labels, y=lower, mode="lines",
+                line=dict(width=0), fill="tonexty",
+                fillcolor="rgba(70,130,180,0.18)",  # steelblue @ 18% alpha
+                hoverinfo="skip", showlegend=False,
+            ), row=r, col=c)
+            fig.add_trace(go.Scatter(
+                x=phase_labels, y=means, mode="lines+markers",
+                line=dict(color="steelblue", width=2),
+                marker=dict(size=5, color="steelblue"),
+                name="Mean", showlegend=False,
+                hovertemplate=(
+                    f"<b>{get_display_name(feat, display_names)}</b><br>"
+                    "%{x}<br>mean = %{y:.3f}<extra></extra>"
+                ),
+            ), row=r, col=c)
+        fig.update_layout(
+            height=160 * n_rows, margin=dict(t=50, b=20),
+            showlegend=False,
+        )
+        fig.update_annotations(font_size=10)
+        fig.update_xaxes(tickfont=dict(size=7))
+        fig.update_yaxes(tickfont=dict(size=8))
         st.plotly_chart(fig, width="stretch")
 
-        with st.expander("📋 Mean per feature per phase (table)"):
-            tbl = (mean_by_phase[[c for c in mean_by_phase.columns
-                                  if c.startswith("Phase ")] + ["Display Name"]]
-                   .reset_index().rename(columns={"Feature": "Raw Feature"})
-                   .set_index("Display Name")
-                   .round(3))
-            st.table(_centered(tbl))
+        with st.expander("📋 Mean ± std per feature per phase (table)"):
+            mean_tbl = (mean_by_phase[phase_labels + ["Display Name"]]
+                        .reset_index().rename(columns={"Feature": "Raw Feature"})
+                        .set_index("Display Name")
+                        .round(3))
+            std_tbl = std_by_phase[phase_labels].copy()
+            std_tbl.index = [
+                get_display_name(f, display_names) for f in std_tbl.index
+            ]
+            std_tbl.index.name = "Display Name"
+            st.markdown("**Mean per phase**")
+            st.table(_centered(mean_tbl))
+            st.markdown("**Standard deviation per phase**")
+            st.table(_centered(std_tbl.round(3)))
 
     # =================================================================
     # Tab 2 — drill into one feature
@@ -161,7 +323,7 @@ def render_eda(df_encoded, features, target, display_names,
             {0: class_names[0], 1: class_names[1]}
         )
 
-        # ── Boxplot or histogram depending on feature shape ──
+        # Boxplot or histogram depending on feature shape
         unique_vals = df_sub[feat].nunique()
         if unique_vals <= 7:
             # categorical / Likert — show stacked bar of counts per phase
@@ -190,19 +352,52 @@ def render_eda(df_encoded, features, target, display_names,
             fig.update_layout(showlegend=False)
         st.plotly_chart(fig, width="stretch")
 
-        # Per-class median per phase
-        med = (
+        # Per-class mean ± 1 std per phase. The shaded band illustrates
+        # the within-class variance at each wave.
+        import plotly.graph_objects as go
+        agg = (
             df_sub.groupby(["Phase", "Class"])[feat]
-            .median().reset_index()
+            .agg(["mean", "std"]).reset_index()
         )
-        med["Phase Label"] = med["Phase"].map(_phase_label)
-        fig2 = px.line(
-            med, x="Phase Label", y=feat, color="Class",
-            markers=True,
-            color_discrete_map={
-                class_names[0]: "steelblue", class_names[1]: "coral",
-            },
-            title=f"Median of {feat_label} by phase, split by class",
+        agg["Phase Label"] = agg["Phase"].map(_phase_label)
+        class_colors = {
+            class_names[0]: ("steelblue", "rgba(70,130,180,0.18)"),
+            class_names[1]: ("coral",     "rgba(255,127,80,0.18)"),
+        }
+        fig2 = go.Figure()
+        for cls_name in [class_names[0], class_names[1]]:
+            sub = agg[agg["Class"] == cls_name].sort_values("Phase")
+            if sub.empty:
+                continue
+            line_color, band_color = class_colors[cls_name]
+            stds = sub["std"].fillna(0.0).values
+            means = sub["mean"].values
+            x_vals = sub["Phase Label"].tolist()
+            upper = (means + stds).tolist()
+            lower = (means - stds).tolist()
+            fig2.add_trace(go.Scatter(
+                x=x_vals, y=upper, mode="lines",
+                line=dict(width=0), hoverinfo="skip", showlegend=False,
+            ))
+            fig2.add_trace(go.Scatter(
+                x=x_vals, y=lower, mode="lines",
+                line=dict(width=0), fill="tonexty", fillcolor=band_color,
+                hoverinfo="skip", showlegend=False,
+            ))
+            fig2.add_trace(go.Scatter(
+                x=x_vals, y=means.tolist(),
+                mode="lines+markers", name=cls_name,
+                line=dict(color=line_color, width=2),
+                marker=dict(size=7, color=line_color),
+                hovertemplate=(
+                    f"<b>{cls_name}</b><br>%{{x}}<br>"
+                    "mean = %{y:.3f}<extra></extra>"
+                ),
+            ))
+        fig2.update_layout(
+            title=f"Mean ± 1 std of {feat_label} by phase, split by class",
+            xaxis_title="Phase Label", yaxis_title=feat_label,
+            legend=dict(title="Class"),
         )
         st.plotly_chart(fig2, width="stretch")
 
