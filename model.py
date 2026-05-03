@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import os
 import pickle
+import base64
+import textwrap
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -267,6 +269,328 @@ def load_artifacts():
             precomputed_cfs_kdtree, precomputed_cfs_genetic)
 
 
+# Architecture Diagram with hover/tap tooltips
+ARCHITECTURE_REGIONS = [
+    {
+        "key": "dataset",
+        "top": 4, "left": 3, "width": 30, "height": 70,
+        "q_top": 6, "q_left": 22,
+        "title": "Dataset + Data Preprocessing",
+        "body": (
+            "<ul>"
+            "<li>Longitudinal panel data reshaped from <em>wide</em> to "
+            "<em>long</em> format across the four survey phases.</li>"
+            "<li>Categorical features one-hot encoded (Job type) or binary "
+            "encoded (Sex, Marital Status, Has Children).</li>"
+            "<li>Missing household income flagged with a dedicated "
+            "<code>Income_Missing</code> indicator.</li>"
+            "<li>UCLA-LS3 scores binarized at the cutoff of <strong>22</strong> "
+            "&rarr; <em>Low</em> vs. <em>High</em> Loneliness.</li>"
+            "<li>Phases 1&ndash;3 used for training (n&nbsp;=&nbsp;7,977); "
+            "Phase&nbsp;4 (2024) held out for testing (n&nbsp;=&nbsp;2,659).</li>"
+            "</ul>"
+        ),
+    },
+    {
+        "key": "model",
+        "top": 0, "left": 40, "width": 38, "height": 60,
+        "q_top": 4, "q_left": 4,
+        "title": "Model + Explainability Layer",
+        "body": (
+            "<p><strong>Primary Model: TabPFN</strong></p>"
+            "<ul>"
+            "<li>TabPFN is a <em>Prior-Data Fitted Network</em> &mdash; a "
+            "meta-learned transformer that performs Bayesian inference in a "
+            "single forward pass.</li>"
+            "<li>It requires no hyperparameter tuning and is especially "
+            "strong on tabular data with moderate sample sizes.</li>"
+            "<li>The model takes <strong>26 features</strong> "
+            "(demographics, lifestyle, COVID impact) and outputs class "
+            "probabilities for Low / High loneliness.</li>"
+            "</ul>"
+            "<p><strong>XGBoost Surrogate</strong></p>"
+            "<ul>"
+            "<li>An XGBoost classifier (500 trees, depth 6, lr=0.05, "
+            "subsample=0.8, colsample_bytree=0.8) is trained to mimic "
+            "TabPFN's predictions, with sample weights emphasising "
+            "high-confidence TabPFN predictions.</li>"
+            "<li>The surrogate enables <strong>exact TreeSHAP</strong> in "
+            "polynomial time &mdash; not feasible directly on TabPFN.</li>"
+            "<li>It also powers the <strong>What-If Analysis</strong> for "
+            "instant interactive predictions.</li>"
+            "</ul>"
+        ),
+    },
+    {
+        "key": "shap",
+        "top": 70, "left": 26, "width": 22, "height": 38,
+        "q_top": 28, "q_left": 8,
+        "title": "SHAP (SHapley Additive exPlanations)",
+        "body": (
+            "<p>SHAP produces <strong>both global and local feature "
+            "importance</strong> from the same set of values. Averaging "
+            "the absolute SHAP values across the test set gives "
+            "population-level importance; the per-sample SHAP vector "
+            "explains an individual prediction.</p>"
+            "<p>The values are grounded in cooperative game theory &mdash; "
+            "they are the unique attribution that satisfies efficiency, "
+            "symmetry, dummy, and additivity, so contributions sum exactly "
+            "to the model output minus its expected value.</p>"
+            "<p>We compute <strong>TreeSHAP</strong> on the XGBoost "
+            "surrogate, which gives <em>exact</em> SHAP values in polynomial "
+            "time &mdash; substantially faster than KernelSHAP on this "
+            "dataset.</p>"
+        ),
+    },
+    {
+        "key": "dice",
+        "top": 20, "left": 47, "width": 32, "height": 56,
+        "q_top": 70, "q_left": 78,
+        "title": "DiCE (Diverse Counterfactual Explanations)",
+        "body": (
+            "<p>DiCE generates <strong>diverse, actionable</strong> "
+            "counterfactuals &mdash; multiple alternative scenarios that "
+            "would flip the model's prediction, while differing from each "
+            "other (<em>diversity</em>) and staying close to the original "
+            "instance (<em>proximity</em>).</p>"
+            "<p>Crucially, DiCE supports first-class constraints via "
+            "<code>features_to_vary</code> and <code>permitted_range</code>, "
+            "which let us <em>forbid</em> changes to immutable attributes "
+            "such as Age and Sex. This is what makes the "
+            "<strong>Demographics-Excluded</strong> counterfactual set "
+            "meaningful &mdash; a recommendation a person can actually act "
+            "on, not one that requires becoming younger or changing "
+            "biological sex.</p>"
+            "<p>DiCE is model-agnostic, so the same explainer wraps TabPFN "
+            "directly &mdash; no surrogate needed for counterfactual "
+            "search.</p>"
+        ),
+    },
+]
+
+def _render_architecture_diagram():
+    """Render architecture.png with hover/tap tooltips at each named section."""
+    img_path = os.path.join(BASE_DIR, "assets", "architecture.png")
+    if not os.path.exists(img_path):
+        st.warning("`assets/architecture.png` not found.")
+        return
+    with open(img_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode("ascii")
+
+    region_html = []
+    for r in ARCHITECTURE_REGIONS:
+        region_html.append(textwrap.dedent(f"""
+            <div class="arch-region arch-region-{r['key']}"
+                 style="top:{r['top']}%; left:{r['left']}%;
+                        width:{r['width']}%; height:{r['height']}%;">
+              <button class="arch-q" type="button" aria-label="{r['title']}"
+                      style="top:{r['q_top']}%; left:{r['q_left']}%;">?</button>
+              <div class="arch-tooltip" role="tooltip">
+                <div class="arch-tooltip-title">{r['title']}</div>
+                <div class="arch-tooltip-body">{r['body']}</div>
+              </div>
+            </div>
+        """).strip())
+
+    html = textwrap.dedent("""
+    <style>
+      .arch-wrap {
+          position: relative;
+          max-width: 950px;
+          margin: 0 auto 24px auto;
+          font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont,
+                       sans-serif;
+      }
+      .arch-img {
+          width: 100%;
+          height: auto;
+          display: block;
+          border-radius: 8px;
+      }
+      .arch-region {
+          position: absolute;
+          box-sizing: border-box;
+      }
+      .arch-q {
+          position: absolute;
+          width: 28px; height: 28px;
+          border: none;
+          border-radius: 50%;
+          background: #4361ee;
+          color: #ffffff;
+          font-size: 16px;
+          font-weight: 700;
+          line-height: 28px;
+          padding: 0;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+          z-index: 5;
+          transition: transform 0.12s ease,
+                      background 0.12s ease;
+      }
+      .arch-q:hover, .arch-q:focus {
+          background: #2541b2;
+          transform: scale(1.12);
+          outline: 2px solid #ffffff;
+          outline-offset: 1px;
+      }
+      .arch-tooltip {
+          visibility: hidden;
+          opacity: 0;
+          position: absolute;
+          top: 0; left: 50%;
+          transform: translate(-50%, -8px);
+          width: 320px;
+          max-width: 80vw;
+          background: #ffffff;
+          color: #1a1a2e;
+          border: 1px solid #e1e6f0;
+          border-radius: 10px;
+          box-shadow: 0 8px 24px rgba(20, 30, 60, 0.18);
+          padding: 12px 14px;
+          font-size: 13px;
+          line-height: 1.45;
+          z-index: 10;
+          transition: opacity 0.15s ease;
+          pointer-events: none;
+      }
+      /* Click-to-open: tooltip shows only while the "?" button (or any
+         child) holds focus. This unifies the desktop click and the mobile
+         tap experience — no hover behaviour on PC. */
+      .arch-region:focus-within .arch-tooltip {
+          visibility: visible;
+          opacity: 1;
+          pointer-events: auto;
+      }
+      .arch-tooltip-title {
+          font-weight: 700;
+          color: #4361ee;
+          margin-bottom: 6px;
+          font-size: 14px;
+      }
+      .arch-tooltip-body p { margin: 6px 0; }
+      .arch-tooltip-body ul {
+          margin: 4px 0 4px 18px;
+          padding: 0;
+      }
+      .arch-tooltip-body li { margin-bottom: 3px; }
+      .arch-tooltip-body code {
+          background: #f0f2f7;
+          padding: 1px 4px;
+          border-radius: 3px;
+          font-size: 12px;
+      }
+      /* Right-side tooltips flip to the left so they don't overflow */
+      .arch-region-dice .arch-tooltip {
+          left: auto; right: 50%;
+          transform: translate(50%, -8px);
+      }
+      .arch-hint {
+          text-align: center;
+          font-size: 12px;
+          color: #6b7280;
+          margin-top: -16px;
+          margin-bottom: 16px;
+      }
+    </style>
+    <div class="arch-wrap">
+      <img src="data:image/png;base64,__IMG__" class="arch-img"
+           alt="XAI pipeline architecture diagram" />
+      __REGIONS__
+    </div>
+    <div class="arch-hint">
+      💡 Click (or tap on mobile) any <strong>?</strong> icon for the details
+      of that pipeline stage. Click outside the popup to close it.
+    </div>
+    """).replace("__IMG__", img_b64).replace("__REGIONS__", "\n".join(region_html))
+
+    st.markdown(html, unsafe_allow_html=True)
+
+def _render_model_selection():
+    """Render the model-selection narrative (baseline benchmark + TabPFN choice)."""
+    st.subheader("Why TabPFN?")
+    st.markdown(
+        "Before settling on TabPFN as the primary model, we "
+        "trained seven candidate classifiers on Phases 1&ndash;3 and evaluates "
+        "every model on the held-out 2024 test set (n&nbsp;=&nbsp;2,659). "
+        "All baselines use scikit-learn defaults so the comparison reflects "
+        "out-of-the-box performance rather than tuning effort."
+    )
+
+    baseline_df = pd.DataFrame([
+        {"Model": "TabPFN",                 "Accuracy": 0.7793, "F1-Score": 0.8397, "ROC AUC": 0.8424, "Train Time (s)": 0.69, "Test Time (s)": 8.51},
+        {"Model": "Support Vector Machine", "Accuracy": 0.7781, "F1-Score": 0.8367, "ROC AUC": 0.8316, "Train Time (s)": 5.88, "Test Time (s)": 0.43},
+        {"Model": "Random Forest",          "Accuracy": 0.7732, "F1-Score": 0.8349, "ROC AUC": 0.8317, "Train Time (s)": 0.58, "Test Time (s)": 0.03},
+        {"Model": "MLP Classifier",         "Accuracy": 0.7717, "F1-Score": 0.8281, "ROC AUC": 0.8186, "Train Time (s)": 1.36, "Test Time (s)": 0.00},
+        {"Model": "K-Nearest Neighbors",    "Accuracy": 0.7537, "F1-Score": 0.8197, "ROC AUC": 0.7885, "Train Time (s)": 0.00, "Test Time (s)": 0.15},
+        {"Model": "Gaussian Naive Bayes",   "Accuracy": 0.7461, "F1-Score": 0.8016, "ROC AUC": 0.8109, "Train Time (s)": 0.00, "Test Time (s)": 0.00},
+        {"Model": "Decision Tree",          "Accuracy": 0.6826, "F1-Score": 0.7579, "ROC AUC": 0.6491, "Train Time (s)": 0.03, "Test Time (s)": 0.00},
+    ])
+
+    styled = (baseline_df.style
+              .format({"Accuracy": "{:.4f}",
+                       "F1-Score": "{:.4f}",
+                       "ROC AUC":  "{:.4f}",
+                       "Train Time (s)": "{:.2f}",
+                       "Test Time (s)":  "{:.2f}"})
+              .background_gradient(subset=["Accuracy", "F1-Score", "ROC AUC"],
+                                   cmap="Blues")
+              .set_properties(**{"text-align": "center"})
+              .set_table_styles([
+                  {"selector": "th",
+                   "props": [("text-align", "center"),
+                             ("white-space", "nowrap")]},
+              ]))
+    st.dataframe(styled, width="stretch", hide_index=True)
+
+    st.markdown(
+        "TabPFN tops every quality metric &mdash; "
+        "edging out the next-best model (SVM) by a small but consistent "
+        "margin while requiring **no hyperparameter tuning**. "
+    )
+
+
+# About Page
+def render_about():
+    """Landing page — study background and pipeline architecture diagram."""
+    st.title("📖 About")
+
+    st.subheader("About the Study")
+    st.markdown(
+        "The COVID-19 pandemic caused widespread psychological distress, and in "
+        "Japan, lifestyle changes from teleworking and online classes, alongside "
+        "economic hardship, led to increased loneliness. Predicting post-COVID "
+        "loneliness raises questions about how machine learning models produce "
+        "mental health classifications, particularly when deep learning systems "
+        "function as \"black boxes\" despite their strong performance.\n\n"
+        "This project develops an **explainable AI pipeline** using longitudinal "
+        "survey data from **2,659 Japanese respondents** across four waves "
+        "(**2020–2024**). The pipeline combines **TabPFN** with an **XGBoost "
+        "surrogate** for computation of **SHAP** feature effects and generation "
+        "of **DiCE** counterfactual explanations. On a temporally held-out 2024 "
+        "test set, the model achieves an **ROC-AUC of 0.8424** and an "
+        "**F1-Score of 0.8396**, with SHAP and DiCE agreeing on the features "
+        "that matter most for predicting *High Loneliness*: **optimism level**, "
+        "**social interaction deterioration**, and **offline social interaction**. "
+        "The generated counterfactual explanations produce actionable, "
+        "person-specific recommendations that a psychiatrist could use in "
+        "clinical intervention."
+    )
+    st.markdown("**Key Innovations**")
+    st.markdown(
+        "- Insight into the key features that contribute to post-COVID-19 "
+        "loneliness.\n"
+        "- The generation of actionable counterfactual explanations using four "
+        "complementary strategies: **KDTree**, **Genetic**, **Random**, and "
+        "**Demographics-Excluded**.\n"
+        "- A working interactive XAI application that integrates global SHAP, "
+        "local SHAP, all four counterfactual variants, and a live What-If "
+        "panel for real-time exploration of model predictions."
+    )
+
+    st.subheader("Model Architecture & Pipeline")
+    _render_architecture_diagram()
+
 # Model Overview Page
 def render_overview(model, X_test, y_test, class_names, precomputed_preds):
     px, ff = _import_plotly()
@@ -274,79 +598,15 @@ def render_overview(model, X_test, y_test, class_names, precomputed_preds):
 
     st.title("📊 Model Overview")
 
-    header_col1, header_col2 = st.columns([3, 1])
-    with header_col1:
-        st.info(
-            "This dashboard explains a machine learning model that predicts loneliness levels "
-            "based on the UCLA Loneliness Scale. A score of 22 or above indicates **High Loneliness**. "
-            "The model uses demographic information, health behaviors, and COVID-related impacts "
-            "to make predictions."
-        )
-
-    st.subheader("About the Study")
-    st.markdown(
-        "This study investigates **post-COVID loneliness prediction** using explainable AI. "
-        "It draws on longitudinal survey data from **2,659 Japanese respondents** across four "
-        "waves (2020--2024), capturing socio-demographic attributes, coping behaviors, "
-        "COVID-19 impact measures, and psychological scales including the **UCLA Loneliness "
-        "Scale (UCLA-LS3)**."
+    st.info(
+        "This page focuses on **how well the model performs** on the "
+        "held-out 2024 test set. It compares the seven baseline classifiers "
+        "evaluated in the training notebook, then drills into the chosen "
+        "TabPFN model's accuracy, F1, ROC AUC, confusion matrix, and "
+        "prediction-confidence distribution."
     )
 
-    st.subheader("Model Architecture & Pipeline")
-    st.markdown(
-        "**1. Data Preprocessing**\n"
-        "- Longitudinal panel data reshaped from wide to long format (4 survey phases)\n"
-        "- Categorical features one-hot encoded (Job type) or binary encoded (Sex, Marital Status)\n"
-        "- Missing household income flagged with a dedicated `Income_Missing` indicator\n"
-        "- UCLA-LS3 scores binarized at the cutoff of **22** → Low vs. High Loneliness\n"
-        "- Phases 1--3 used for training (n=7,977); Phase 4 (2024) held out for testing (n=2,659)\n\n"
-        "**2. Primary Model: TabPFN**\n"
-        "- TabPFN is a Prior-Data Fitted Network — a "
-        "meta-learned transformer that performs Bayesian inference in a single forward pass\n"
-        "- It requires no hyperparameter tuning and is especially strong on tabular data with "
-        "moderate sample sizes\n"
-        "- The model takes **26 features** (demographics, lifestyle, COVID impact) and outputs "
-        "class probabilities for Low/High loneliness\n\n"
-        "**3. XGBoost Surrogate**\n"
-        "- An XGBoost classifier (500 trees, depth 6, lr=0.05, subsample=0.8, "
-        "colsample_bytree=0.8) is trained to mimic TabPFN's predictions on the "
-        "training set, with sample weights emphasising high-confidence TabPFN "
-        "predictions\n"
-        "- XGBoost was selected by a notebook benchmark that compared LightGBM, "
-        "XGBoost, Random Forest, Decision Tree, and Logistic Regression on test-set "
-        "agreement and Spearman rank correlation against TabPFN's probabilities — "
-        "XGBoost won on test agreement\n"
-        "- The surrogate enables **exact TreeSHAP** computation (polynomial time), "
-        "which would not be feasible directly on TabPFN\n"
-        "- The surrogate also powers the **What-If Analysis** for instant "
-        "interactive predictions"
-    )
-
-    st.subheader("Why SHAP and DiCE?")
-    st.markdown(
-        "**SHAP (SHapley Additive exPlanations)**\n\n"
-        "SHAP was selected because it produces **both global and local feature importance** "
-        "from the same set of values. Averaging the absolute SHAP values across the test set "
-        "gives population-level importance (which features matter overall), while the "
-        "per-sample SHAP vector explains an individual prediction (why *this* person was "
-        "classified the way they were). The values are grounded in cooperative game theory — "
-        "they are the unique attribution that satisfies efficiency, symmetry, dummy, and "
-        "additivity, so feature contributions sum exactly to the model output minus its "
-        "expected value. We compute **TreeSHAP** on the XGBoost surrogate, which gives "
-        "*exact* SHAP values in polynomial time — substantially faster than KernelSHAP "
-        "(which is model-agnostic but approximate and orders of magnitude slower on this "
-        "dataset).\n\n"
-        "**DiCE (Diverse Counterfactual Explanations)**\n\n"
-        "DiCE generates **diverse, actionable** counterfactuals — multiple alternative "
-        "scenarios that would flip the model's prediction, while differing from each other "
-        "(diversity) and staying close to the original instance (proximity). Crucially, "
-        "DiCE supports first-class constraints via `features_to_vary` and `permitted_range`, "
-        "which let us *forbid* changes to immutable attributes such as Age and Sex. This is "
-        "what makes the **Demographics-Excluded** counterfactual set in the explorer below "
-        "meaningful: a recommendation a person can actually act on, not one that requires "
-        "becoming younger or changing biological sex. DiCE is model-agnostic, so the same "
-        "explainer wraps TabPFN directly — no surrogate needed for counterfactual search."
-    )
+    _render_model_selection()
     st.markdown("---")
 
     if precomputed_preds is not None:
@@ -372,18 +632,7 @@ def render_overview(model, X_test, y_test, class_names, precomputed_preds):
     col3.metric("Accuracy", f"{acc:.1%}",
                 help="Percentage of correct predictions out of all predictions made.")
 
-    st.markdown(
-        f"The model achieves an **ROC AUC of {auc:.4f}**, meaning it has a "
-        f"**{auc:.1%}** chance of correctly ranking a randomly chosen High Loneliness "
-        f"individual above a randomly chosen Low Loneliness individual. "
-        f"It was evaluated on {len(y_test)} individuals from the 2024 survey wave."
-    )
-
     st.subheader("Confusion Matrix")
-    st.markdown(
-        "This table shows how many predictions were correct vs. incorrect. "
-        "Rows are actual outcomes; columns are what the model predicted."
-    )
     cm = confusion_matrix(y_test, y_pred)
     fig_cm = ff.create_annotated_heatmap(
         z=cm.tolist(),

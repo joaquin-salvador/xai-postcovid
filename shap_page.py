@@ -52,10 +52,13 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
 
     st.title("🔍 SHAP Explanations")
     st.info(
-        "**SHAP (SHapley Additive exPlanations)** shows how each feature contributes "
-        "to the model's prediction for each person. "
-        "SHAP values are computed via an **XGBoost surrogate** trained to mimic the "
-        "primary TabPFN model, using exact TreeSHAP."
+        "**SHAP (SHapley Additive exPlanations)** quantifies how each feature "
+        "pushes the model's prediction toward *Low* or *High Loneliness* "
+        "— at the **population level** (which features matter overall) and "
+        "at the **individual level** (why *this* person was classified the "
+        "way they were). The values below come from **exact TreeSHAP** on "
+        "the XGBoost surrogate that mirrors the primary TabPFN model, "
+        "giving polynomial-time computation without sacrificing fidelity."
     )
 
     n_explained, n_features = len(X_explain), len(features)
@@ -77,16 +80,27 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
         st.markdown(
             f"Average importance across **{n_explained}** individuals. "
             f"All **{n_features}** features shown for the **{high_name}** class. "
-            "The **top 5 most influential features are highlighted in red**."
+            f"**Bars are colored by impact magnitude:** "
+            "🔴 Very Strong (≥ 1.5) · 🟠 Strong (1.0 – 1.5) · "
+            "🟡 Moderate (0.5 – 1.0) · 🔵 Mild to weak (< 0.5)."
         )
 
         mean_abs = np.abs(shap_values_test[high_idx]).mean(axis=0)
         order = np.argsort(mean_abs)
         names_s = [disp_names[i] for i in order]
         vals_s = mean_abs[order]
-        # Top 5 = the 5 largest mean(|SHAP|) values
-        n_top = 5
-        colors = (["steelblue"] * (len(vals_s) - n_top)) + (["#d62728"] * n_top)
+
+        # Color each bar by impact magnitude band — matches the table in
+        # the "Understanding SHAP Impact Values" expander below.
+        def _band_color(v):
+            if v >= 1.5:
+                return "#d62728"   # red — very strong
+            if v >= 1.0:
+                return "#ff7f0e"   # orange — strong
+            if v >= 0.5:
+                return "#f1c40f"   # yellow — moderate
+            return "#4361ee"        # blue — mild to weak
+        colors = [_band_color(v) for v in vals_s]
 
         fig, ax = plt.subplots(figsize=(8, fig_h))
         ax.barh(names_s, vals_s, color=colors)
@@ -102,14 +116,18 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
 
         with st.expander("📐 Understanding SHAP Impact Values in Classification"):
             st.markdown(
-                "SHAP values represent contributions to the **log-odds**.\n\n"
-                "| Mean(\\|SHAP\\|) | Interpretation |\n|---|---|\n"
-                "| **≥ 1.5** | Very strong — multiplies odds by ~4.5× |\n"
-                "| **1.0–1.5** | Strong |\n| **0.5–1.0** | Moderate |\n"
-                "| **< 0.5** | Mild to weak |\n\n"
-                "A feature with impact **2.0** multiplies odds by ~**7.4×** vs ~**2.7×** "
-                "for impact **1.0** — the effect is exponential, not linear. "
-                "🔴 Red bars in the chart mark the top 5 most influential features."
+                "SHAP values represent contributions to the **log-odds**. "
+                "The bar colors above use the same thresholds as this "
+                "table:\n\n"
+                "| Mean(\\|SHAP\\|) | Interpretation | Bar color |\n"
+                "|---|---|---|\n"
+                "| **≥ 1.5** | Very strong — multiplies odds by ~4.5× | 🔴 Red |\n"
+                "| **1.0 – 1.5** | Strong | 🟠 Orange |\n"
+                "| **0.5 – 1.0** | Moderate | 🟡 Yellow |\n"
+                "| **< 0.5** | Mild to weak | 🔵 Blue |\n\n"
+                "A feature with impact **2.0** multiplies odds by ~**7.4×** "
+                "vs ~**2.7×** for impact **1.0** — the effect is exponential, "
+                "not linear."
             )
 
     # Tab 2: Feature Effects

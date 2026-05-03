@@ -164,17 +164,26 @@ def render_eda(df_encoded, features, target, display_names,
 
     st.title("📈 Exploratory Data Analysis")
 
+    st.info(
+        "Before diving into the model, this page traces the **longitudinal "
+        "structure** of the survey. The dataset spans four waves "
+        "(**Phase 1 → 2020**, **Phase 2 → 2021**, **Phase 3 → 2022**, "
+        "**Phase 4 → 2024**), and the model is trained on Phases 1–3 and "
+        "evaluated on Phase 4. The visualisations below show how respondent "
+        "counts and feature distributions evolved across the pandemic — "
+        "context that motivates the explainability layer on the next pages."
+    )
+
     # Sankey diagram of survey-wave flow — sits at the top of the page so
     # readers see the longitudinal design before drilling into features.
     _render_wave_sankey()
     st.markdown("---")
 
-    st.info(
-        "How does each feature's distribution shift across the four "
-        "longitudinal survey waves? Each phase corresponds to a year: "
-        "**Phase 1 → 2020**, **Phase 2 → 2021**, **Phase 3 → 2022**, "
-        "**Phase 4 → 2024**. Use the controls below to drill into any "
-        "feature."
+    st.markdown(
+        "**Drill into the features.** The tabs below let you compare each "
+        "feature's distribution across the four waves, look for shifts that "
+        "line up with COVID-19 milestones, and see how the *High Loneliness* "
+        "rate moves over time."
     )
 
     if df_encoded is None or "Phase" not in df_encoded.columns:

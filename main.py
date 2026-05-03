@@ -4,7 +4,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
-    page_title="XAI Dashboard — UCLA Loneliness",
+    page_title="XAI for Post-COVID Loneliness Prediction",
     page_icon="assets/computer.png",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -110,12 +110,13 @@ def main():
     st.sidebar.image(
         "assets/computer.png"
     )
-    st.sidebar.title("UCLA Loneliness XAI Dashboard")
+    st.sidebar.title("XAI for Post-COVID Loneliness Prediction")
     st.sidebar.markdown("---")
 
     page = st.sidebar.radio("Navigate to:", [
-        "📊 Model Overview",
+        "📖 About",
         "📈 EDA",
+        "📊 Model Overview",
         "🔍 SHAP Explanations",
         "🔧 What-If Analysis",
         "🔄 Counterfactual Explorer",
@@ -156,7 +157,10 @@ def main():
     st.sidebar.markdown("All images sourced from [irasutoya.com](https://www.irasutoya.com/)")
 
     # Navigation
-    if page == "📊 Model Overview":
+    if page == "📖 About":
+        from model import render_about
+        render_about()
+    elif page == "📊 Model Overview":
         from model import render_overview
         render_overview(model, X_test, y_test, class_names, precomputed_preds)
     elif page == "📈 EDA":

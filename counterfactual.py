@@ -196,8 +196,14 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
 
     st.title("🔧 What-If Analysis")
     st.info(
-        "Explore how changing a person's characteristics would affect the prediction."
-        + (" Predictions use the **XGBoost surrogate** for fast response."
+        "**Live, interactive predictions.** Pick a real person from the test "
+        "set, then move the sliders to see how altering their lifestyle, "
+        "COVID-impact, or demographic features would shift the model's "
+        "loneliness probability. The SHAP waterfall on the right keeps the "
+        "*original* attribution visible so you can compare the live "
+        "prediction against the explanation for the unchanged person."
+        + (" Predictions are served by the **XGBoost surrogate** for "
+           "instant response."
            if surrogate else ""))
 
     options, labels = build_person_options(X_explain, class_names, precomputed_preds)
@@ -291,21 +297,23 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
         st.markdown("---")
         st.subheader("Results")
 
-        left, right = st.columns(2)
-        with left:
-            st.markdown("##### Original")
-            st.metric("Prediction", class_names[orig_pred])
-            st.metric("P(High Loneliness)", f"{orig_prob[1]:.1%}")
-        with right:
-            st.markdown("##### Modified")
-            flipped = mod_pred != orig_pred
-            st.metric("Prediction", class_names[mod_pred],
-                      delta="Flipped!" if flipped else "No change",
-                      delta_color="normal" if flipped else "off")
-            st.metric("P(High Loneliness)", f"{mod_prob[1]:.1%}",
-                      delta=f"{mod_prob[1] - orig_prob[1]:+.1%}")
-
         if changed_feats:
+            # Side-by-side comparison only makes sense once at least one
+            # feature has actually been edited.
+            left, right = st.columns(2)
+            with left:
+                st.markdown("##### Original")
+                st.metric("Prediction", class_names[orig_pred])
+                st.metric("P(High Loneliness)", f"{orig_prob[1]:.1%}")
+            with right:
+                st.markdown("##### Modified")
+                flipped = mod_pred != orig_pred
+                st.metric("Prediction", class_names[mod_pred],
+                          delta="Flipped!" if flipped else "No change",
+                          delta_color="normal" if flipped else "off")
+                st.metric("P(High Loneliness)", f"{mod_prob[1]:.1%}",
+                          delta=f"{mod_prob[1] - orig_prob[1]:+.1%}")
+
             st.markdown("**What you changed:**")
             st.dataframe(pd.DataFrame([{
                 "Feature": get_display_name(f, display_names),
@@ -315,7 +323,11 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
                                                  category_labels, likert_features),
             } for f in changed_feats]), width="stretch", hide_index=True)
         else:
-            st.info("No features changed yet. Adjust the controls on the left.")
+            st.markdown("##### Original")
+            st.metric("Prediction", class_names[orig_pred])
+            st.metric("P(High Loneliness)", f"{orig_prob[1]:.1%}")
+            st.info("No features changed yet. Adjust the controls on the left "
+                    "to see the modified prediction here.")
 
         # SHAP waterfall
         n_features = len(features)
@@ -745,16 +757,6 @@ def _render_method_evaluation(cf_dicts, X_test, features, display_names):
     # Trade-offs
     with st.expander("📖 Trade-offs", expanded=False):
         st.markdown(
-            "All three CF methods reached **100% validity** on the "
-            "evaluation sample — every input got at least one valid CF — "
-            "so the comparison comes down to the shape of the explanation:\n\n"
-            "- **🎲 Random** perturbs the original instance until the "
-            "prediction flips. In our experiment it produced the "
-            "**sparsest** CFs by a wide margin (≈3.4 features changed per "
-            "CF, vs ≈10–12 for the other methods), making each CF the "
-            "easiest to read. The trade-off is plausibility: the "
-            "perturbations are synthetic and may land on combinations "
-            "that don't exist in any real respondent.\n"
             "- **🌳 KDTree** returns *real* training people who are already "
             "classified in the desired class, so every CF is guaranteed "
             "plausible. In our experiment it also achieved the **lowest "
@@ -769,6 +771,13 @@ def _render_method_evaluation(cf_dicts, X_test, features, display_names):
             "when you want to show a range of distinct routes to the same "
             "outcome — at the cost of run-time and slightly higher "
             "proximity than KDTree.\n"
+            "- **🎲 Random** perturbs the original instance until the "
+            "prediction flips. In our experiment it produced the "
+            "**sparsest** CFs by a wide margin (≈3.4 features changed per "
+            "CF, vs ≈10–12 for the other methods), making each CF the "
+            "easiest to read. The trade-off is plausibility: the "
+            "perturbations are synthetic and may land on combinations "
+            "that don't exist in any real respondent.\n"
             "- **🔒 Demographics-Excluded** is Random with `Age` and "
             "`Sex_Male` held constant — useful when the explanation has "
             "to be actionable for the individual.\n\n"
@@ -793,9 +802,13 @@ def render_counterfactuals(model, X_train, X_test, y_train, y_test, features,
     immutable_features = feature_info.get("immutable_features", []) or []
 
     st.info(
-        "Counterfactual explanations answer: **\"What would need to change for this "
-        "person's prediction to be different?\"** They show the smallest changes needed "
-        "to flip the model's decision."
+        "Counterfactual explanations answer the question every clinician "
+        "eventually asks: **\"What would need to change for this person's "
+        "prediction to be different?\"** Whereas SHAP attributes the "
+        "*current* prediction, DiCE searches for the **smallest, most "
+        "diverse, and most actionable changes** that would flip the model's "
+        "decision — turning a black-box probability into a concrete "
+        "intervention plan."
     )
 
     # Single source of truth for the four CF methods.
