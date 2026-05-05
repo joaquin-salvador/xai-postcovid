@@ -44,9 +44,6 @@ def _build_wave_sankey():
         f"Phase 2 ({WAVE_INFO[1]['year']})\n{WAVE_INFO[1]['n']:,}",
         f"Phase 3 ({WAVE_INFO[2]['year']})\n{WAVE_INFO[2]['n']:,}",
         f"Phase 4 ({WAVE_INFO[3]['year']})\n{WAVE_INFO[3]['n']:,}",
-        "No response after Phase 1",
-        "No response after Phase 2",
-        "No response after Phase 3",
     ]
     node_colors = [
         PHASE_PALETTE[1], PHASE_PALETTE[2],
