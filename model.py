@@ -603,26 +603,31 @@ def render_about():
 
     with st.expander("📚 References", expanded=False):
         st.markdown(
-            "[1] Sugaya, N., et al. (2021). \"Factors associated with poor mental "
-            "health during the COVID-19 pandemic among Japanese adults.\" "
-            "*International Journal of Environmental Research and Public Health.*\n\n"
-            "[2] Yamamoto, T., et al. (2022). \"Loneliness and COVID-19: Insights "
-            "from a Japanese longitudinal study.\" *Frontiers in Psychiatry.*\n\n"
-            "[3] Ćosić, K., et al. (2021). \"Artificial intelligence in prediction "
-            "and detection of mental health disorders: A survey.\" "
-            "*Applied Sciences.*\n\n"
-            "[4] Sugaya, N., et al. (2024). \"Long-term mental health impacts of "
-            "COVID-19: Findings from a four-wave longitudinal survey in Japan.\" "
-            "*Journal of Affective Disorders.*\n\n"
-            "[5] Hollmann, N., et al. (2023). \"TabPFN: A transformer that solves "
-            "small tabular classification problems in a second.\" *ICLR 2023.*\n\n"
+            "[1] Sugaya, N., Yamamoto, T., Suzuki, N., & Uchiumi, C. (2020). "
+            "\"A real-time survey on the psychological impact of mild lockdown for "
+            "COVID-19 in the Japanese population.\" *Scientific Data*, 7(1), 372.\n\n"
+            "[2] Yamamoto, T., Uchiumi, C., Suzuki, N., Sugaya, N., et al. (2022). "
+            "\"Mental health and social isolation under repeated mild lockdowns in "
+            "Japan.\" *Scientific Reports*, 12(1), 8452.\n\n"
+            "[3] Ćosić, K., Popović, S., Šarlija, M., & Kesedžić, I. (2021). "
+            "\"AI-based prediction and prevention of psychological and behavioral "
+            "changes in ex-COVID-19 patients.\" *Frontiers in Psychology*, 12, 782866.\n\n"
+            "[4] Sugaya, N., Yamamoto, T., Suzuki, N., & Uchiumi, C. (2024). "
+            "\"Loneliness and social isolation factors under the prolonged COVID-19 "
+            "pandemic in Japan: 2-year longitudinal study.\" *JMIR Public Health and "
+            "Surveillance*, 10, e51653.\n\n"
+            "[5] Hollmann, N., Müller, S., Eggensperger, K., & Hutter, F. (2023). "
+            "\"TabPFN: A transformer that solves small tabular classification problems "
+            "in a second.\" *ICLR 2023.*\n\n"
             "[6] Lundberg, S. M., & Lee, S.-I. (2017). \"A unified approach to "
             "interpreting model predictions.\" *NeurIPS 2017.*\n\n"
-            "[7] Mothilal, R. K., et al. (2020). \"Explaining machine learning "
-            "classifiers through diverse counterfactual explanations.\" *FAT* 2020.*\n\n"
-            "[8] Torres, A., et al. (2024). \"Machine learning approaches for "
-            "mental health prediction: A systematic review.\" *Artificial "
-            "Intelligence in Medicine.*"
+            "[7] Mothilal, R. K., Sharma, A., & Tan, C. (2020). \"Explaining machine "
+            "learning classifiers through diverse counterfactual explanations.\" "
+            "*ACM FAccT 2020*, 607–617.\n\n"
+            "[8] Torres, A., Wenke, M., Lieneck, C., Ramamonjiarivelo, Z., & Ari, A. "
+            "(2024). \"A systematic review of artificial intelligence used to predict "
+            "loneliness, social isolation, and drug use during the COVID-19 "
+            "pandemic.\" *Journal of Multidisciplinary Healthcare*, 17, 3403–3425."
         )
 
     st.subheader("Model Architecture & Pipeline")
@@ -703,183 +708,133 @@ def render_bibliography():
         {
             "key": "[1]",
             "text": (
-                "N. Sugaya, T. Yamamoto, N. Suzuki, and M. Ueda, "
-                "\"Psychological impact of the COVID-19 epidemic on college students "
-                "in Japan,\" *Psychiatry Research*, vol. 295, p. 113683, 2021."
+                "N. Sugaya, T. Yamamoto, N. Suzuki, and C. Uchiumi, \"A real-time survey on the psychological impact of mild lockdown for COVID-19 in the Japanese population,\" *Scientific Data*, vol. 7, no. 1, p. 372, 2020."
             ),
         },
         {
             "key": "[2]",
             "text": (
-                "T. Yamamoto, N. Ueda, and N. Sugaya, "
-                "\"Depression, anxiety, quality of life, and related factors among "
-                "individuals under the COVID-19 pandemic: A Japanese cross-sectional "
-                "study,\" *Frontiers in Psychiatry*, vol. 12, 2022."
+                "T. Yamamoto, C. Uchiumi, N. Suzuki, N. Sugaya, et al., \"Mental health and social isolation under repeated mild lockdowns in Japan,\" *Scientific Reports*, vol. 12, no. 1, p. 8452, 2022."
             ),
         },
         {
             "key": "[3]",
             "text": (
-                "K. Ćosić, S. Popović, M. Šarlija, and I. Kesedžić, "
-                "\"Artificial intelligence in prediction and detection of mental health "
-                "disorders: A survey,\" *Applied Sciences*, vol. 11, no. 10, p. 4616, 2021."
+                "K. Ćosić, S. Popović, M. Šarlija, and I. Kesedžić, \"AI-Based Prediction and Prevention of Psychological and Behavioral Changes in Ex-COVID-19 Patients,\" *Frontiers in Psychology*, vol. 12, p. 782866, 2021."
             ),
         },
         {
             "key": "[4]",
             "text": (
-                "N. Sugaya, T. Yamamoto, N. Ueda, and M. Suzuki, "
-                "\"Long-term mental health impacts of COVID-19: Findings from a "
-                "four-wave longitudinal survey in Japan,\" *Journal of Affective "
-                "Disorders*, 2024."
+                "N. Sugaya, T. Yamamoto, N. Suzuki, and C. Uchiumi, \"Loneliness and Social Isolation Factors Under the Prolonged COVID-19 Pandemic in Japan: 2-Year Longitudinal Study,\" *JMIR Public Health and Surveillance*, vol. 10, p. e51653, 2024."
             ),
         },
         {
             "key": "[5]",
             "text": (
-                "N. Hollmann, S. Müller, K. Eggensperger, and F. Hutter, "
-                "\"TabPFN: A transformer that solves small tabular classification "
-                "problems in a second,\" in *Proc. ICLR 2023*, 2023."
+                "N. Hollmann, S. Müller, K. Eggensperger, and F. Hutter, \"TabPFN: A Transformer That Solves Small Tabular Classification Problems in a Second,\" *arXiv:2207.01848*, 2023."
             ),
         },
         {
             "key": "[6]",
             "text": (
-                "S. M. Lundberg and S.-I. Lee, "
-                "\"A unified approach to interpreting model predictions,\" in "
-                "*Advances in Neural Information Processing Systems (NeurIPS)*, "
-                "vol. 30, 2017."
+                "S. M. Lundberg and S.-I. Lee, \"A Unified Approach to Interpreting Model Predictions,\" in *Advances in Neural Information Processing Systems (NeurIPS)*, vol. 30, 2017."
             ),
         },
         {
             "key": "[7]",
             "text": (
-                "R. K. Mothilal, A. Sharma, and C. Tan, "
-                "\"Explaining machine learning classifiers through diverse counterfactual "
-                "explanations,\" in *Proc. ACM FAccT 2020*, pp. 607–617, 2020."
+                "R. K. Mothilal, A. Sharma, and C. Tan, \"Explaining Machine Learning Classifiers through Diverse Counterfactual Explanations,\" in *Proc. ACM FAccT 2020*, pp. 607–617, 2020."
             ),
         },
         {
             "key": "[8]",
             "text": (
-                "A. Torres et al., "
-                "\"Machine learning approaches for mental health prediction: "
-                "A systematic review,\" *Artificial Intelligence in Medicine*, 2024."
+                "A. Torres, M. Wenke, C. Lieneck, Z. Ramamonjiarivelo, and A. Ari, \"A Systematic Review of Artificial Intelligence Used to Predict Loneliness, Social Isolation, and Drug Use During the COVID-19 Pandemic,\" *Journal of Multidisciplinary Healthcare*, vol. 17, pp. 3403–3425, 2024."
             ),
         },
         {
             "key": "[9]",
             "text": (
-                "S. Wachter, B. Mittelstadt, and C. Russell, "
-                "\"Counterfactual explanations without opening the black box: "
-                "Automated decisions and the GDPR,\" *Harvard Journal of Law & "
-                "Technology*, vol. 31, no. 2, 2017."
+                "S. Wachter, B. Mittelstadt, and C. Russell, \"Counterfactual Explanations Without Opening the Black Box: Automated Decisions and the GDPR,\" *SSRN Electronic Journal*, 2017."
             ),
         },
         {
             "key": "[10]",
             "text": (
-                "T. Miller, "
-                "\"Explanation in artificial intelligence: Insights from the social "
-                "sciences,\" *Artificial Intelligence*, vol. 267, pp. 1–38, 2019."
+                "T. Miller, \"Explanation in Artificial Intelligence: Insights from the Social Sciences,\" *arXiv:1706.07269*, 2018."
             ),
         },
         {
             "key": "[11]",
             "text": (
-                "R. Guidotti, "
-                "\"Counterfactual explanations and how to find them: Literature review "
-                "and benchmarking,\" *Data Mining and Knowledge Discovery*, 2024."
+                "R. Guidotti, \"Counterfactual explanations and how to find them: Literature review and benchmarking,\" *Data Mining and Knowledge Discovery*, vol. 38, no. 5, pp. 2770–2824, 2024."
             ),
         },
         {
             "key": "[12]",
             "text": (
-                "A. Kshetry and M. Kantardzic, "
-                "\"WiXAI: A what-if explainability framework for dynamic machine "
-                "learning models,\" 2024."
+                "N. Kshetry and M. Kantardzic, \"What-If XAI Framework (WiXAI): From Counterfactuals towards Causal Understanding,\" *Journal of Computer and Communications*, vol. 12, no. 6, pp. 169–198, 2024."
             ),
         },
         {
             "key": "[13]",
             "text": (
-                "E. Albini, J. Long, D. Dervovic, and D. Magazzeni, "
-                "\"Counterfactual shapley additive explanations,\" in "
-                "*Proc. ACM FAccT 2022*, pp. 1054–1070, 2022."
+                "E. Albini, J. Long, D. Dervovic, and D. Magazzeni, \"Counterfactual Shapley Additive Explanations,\" in *Proc. ACM FAccT 2022*, pp. 1054–1070, 2022."
             ),
         },
         {
             "key": "[14]",
             "text": (
-                "M. T. Ribeiro, S. Singh, and C. Guestrin, "
-                "\"'Why should I trust you?': Explaining the predictions of any "
-                "classifier,\" in *Proc. ACM SIGKDD 2016*, pp. 1135–1144, 2016."
+                "M. T. Ribeiro, S. Singh, and C. Guestrin, \"'Why Should I Trust You?': Explaining the Predictions of Any Classifier,\" *arXiv:1602.04938*, 2016."
             ),
         },
         {
             "key": "[15]",
             "text": (
-                "A. Stickley and M. Ueda, "
-                "\"Loneliness in Japan during the COVID-19 pandemic: Evidence from "
-                "a nationwide survey,\" *Social Science & Medicine*, 2022."
+                "A. Stickley and M. Ueda, \"Loneliness in Japan during the COVID-19 pandemic: Prevalence, correlates and association with mental health,\" *Psychiatry Research*, vol. 307, p. 114318, 2022."
             ),
         },
         {
             "key": "[16]",
             "text": (
-                "N. Engelmann, S. Bartsch, and M. Schulz, "
-                "\"Risk factors for loneliness in the context of the COVID-19 "
-                "pandemic: A systematic review,\" *Social Psychiatry and Psychiatric "
-                "Epidemiology*, 2024."
+                "P. Engelmann, M. Reinke, C. Stein, S. Salzmann, et al., \"Psychological factors associated with Long COVID: A systematic review and meta-analysis,\" *eClinicalMedicine*, vol. 74, p. 102756, 2024."
             ),
         },
         {
             "key": "[17]",
             "text": (
-                "N. Rius Ottenheim et al., "
-                "\"Loneliness, depression and anxiety during the COVID-19 pandemic: "
-                "A cross-sectional study,\" *BMC Psychiatry*, 2022."
+                "N. Rius Ottenheim et al., \"Predictors of mental health deterioration from pre- to post-COVID-19 outbreak,\" *BJPsych Open*, vol. 8, no. 5, p. e162, 2022."
             ),
         },
         {
             "key": "[18]",
             "text": (
-                "K. Nunez, F. Reyes, and M. Santos, "
-                "\"Post-pandemic loneliness and social isolation in the Philippines,\" "
-                "*Philippine Journal of Psychology*, 2023."
+                "K. B. Nuñez, \"A data-driven approach to profiling coping behaviors during the COVID-19 pandemic using automated clustering algorithms,\" B.S. thesis, Dept. of Computer Science, University of the Philippines Diliman, 2023."
             ),
         },
         {
             "key": "[19]",
             "text": (
-                "M. Kumar, P. Verma, and S. Agarwal, "
-                "\"Integrating large language models with explainable AI for "
-                "clinical decision support,\" *npj Digital Medicine*, 2024."
+                "M. Kumar, K. Ramrakhiyani, and H. Garg, \"'Explainable AI' Disease Detection with Reasoning,\" in *Proc. 2024 ICAAIC*, pp. 222–227, 2024."
             ),
         },
         {
             "key": "[20]",
             "text": (
-                "X. Wang, Y. Liu, and Z. Zhang, "
-                "\"Natural language generation of model explanations: A survey,\" "
-                "*IEEE Transactions on Neural Networks and Learning Systems*, 2024."
+                "Y. Wang, X. Qiu, Y. Yue, X. Guo, et al., \"A Survey on Natural Language Counterfactual Generation,\" *arXiv:2407.03993*, 2024."
             ),
         },
         {
             "key": "[21]",
             "text": (
-                "F. Doshi-Velez and B. Kim, "
-                "\"Towards a rigorous science of interpretable machine learning,\" "
-                "*arXiv preprint arXiv:1702.08608*, 2017."
+                "F. Doshi-Velez and B. Kim, \"Towards A Rigorous Science of Interpretable Machine Learning,\" *arXiv:1702.08608*, 2017."
             ),
         },
         {
             "key": "[22]",
             "text": (
-                "L. Deckx, F. van den Akker, N. Buntinx, and "
-                "J. Doorslaer, "
-                "\"A systematic literature review on loneliness,\" "
-                "*Reviews in Clinical Gerontology*, 2014."
+                "L. Deckx, M. van den Akker, and F. Buntinx, \"Risk factors for loneliness in patients with cancer: A systematic literature review and meta-analysis,\" *European Journal of Oncology Nursing*, vol. 18, no. 5, pp. 466–477, 2014."
             ),
         },
     ]

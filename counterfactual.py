@@ -391,8 +391,9 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
     st.markdown("---")
     with st.expander("📚 References", expanded=False):
         st.markdown(
-            "[1] A. Kshetry and M. Kantardzic (2024). \"WiXAI: A what-if explainability "
-            "framework for dynamic machine learning models.\"\n\n"
+            "[1] N. Kshetry and M. Kantardzic (2024). \"What-If XAI Framework "
+            "(WiXAI): From Counterfactuals towards Causal Understanding.\" "
+            "*Journal of Computer and Communications*, 12(6), 169–198.\n\n"
             "[2] S. M. Lundberg and S.-I. Lee (2017). \"A unified approach to "
             "interpreting model predictions.\" *NeurIPS*, vol. 30.\n\n"
             "[3] R. K. Mothilal, A. Sharma, and C. Tan (2020). \"Explaining machine "
