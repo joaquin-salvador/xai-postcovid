@@ -58,7 +58,9 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
         "at the **individual level** (why *this* person was classified the "
         "way they were). The values below come from **exact TreeSHAP** [1] on "
         "the XGBoost surrogate that mirrors the primary TabPFN model [2], "
-        "giving polynomial-time computation without sacrificing fidelity."
+        "giving polynomial-time computation without sacrificing fidelity — "
+        "a fidelity-validated surrogate strategy for model-agnostic "
+        "explainability [3]."
     )
 
     n_explained, n_features = len(X_explain), len(features)
@@ -223,5 +225,8 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
             "Processing Systems (NeurIPS)*, vol. 30.\n\n"
             "[2] N. Hollmann, S. Müller, K. Eggensperger, and F. Hutter (2023). "
             "\"TabPFN: A transformer that solves small tabular classification "
-            "problems in a second.\" *ICLR 2023.*"
+            "problems in a second.\" *ICLR 2023.*\n\n"
+            "[3] Y. Zhao and J. Ma (2025). \"Faithful and Interpretable "
+            "Explanations for Complex Ensemble Time Series Forecasts using "
+            "Surrogate Models and Forecastability Analysis.\" *arXiv:2510.08739.*"
         )

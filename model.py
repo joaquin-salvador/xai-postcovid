@@ -837,6 +837,12 @@ def render_bibliography():
                 "L. Deckx, M. van den Akker, and F. Buntinx, \"Risk factors for loneliness in patients with cancer: A systematic literature review and meta-analysis,\" *European Journal of Oncology Nursing*, vol. 18, no. 5, pp. 466–477, 2014."
             ),
         },
+        {
+            "key": "[23]",
+            "text": (
+                "Y. Zhao and J. Ma, \"Faithful and Interpretable Explanations for Complex Ensemble Time Series Forecasts using Surrogate Models and Forecastability Analysis,\" *arXiv:2510.08739*, 2025."
+            ),
+        },
     ]
 
     for ref in references:
