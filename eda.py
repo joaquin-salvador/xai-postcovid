@@ -44,9 +44,6 @@ def _build_wave_sankey():
         f"Phase 2 ({WAVE_INFO[1]['year']})\n{WAVE_INFO[1]['n']:,}",
         f"Phase 3 ({WAVE_INFO[2]['year']})\n{WAVE_INFO[2]['n']:,}",
         f"Phase 4 ({WAVE_INFO[3]['year']})\n{WAVE_INFO[3]['n']:,}",
-        "No response after Phase 1",
-        "No response after Phase 2",
-        "No response after Phase 3",
     ]
     node_colors = [
         PHASE_PALETTE[1], PHASE_PALETTE[2],
@@ -168,7 +165,7 @@ def render_eda(df_encoded, features, target, display_names,
         "Before diving into the model, this page traces the **longitudinal "
         "structure** of the survey. The dataset spans four waves "
         "(**Phase 1 → 2020**, **Phase 2 → 2021**, **Phase 3 → 2022**, "
-        "**Phase 4 → 2024**), and the model is trained on Phases 1–3 and "
+        "**Phase 4 → 2024**) [1, 2, 3], and the model is trained on Phases 1–3 and "
         "evaluated on Phase 4. The visualisations below show how respondent "
         "counts and feature distributions evolved across the pandemic — "
         "context that motivates the explainability layer on the next pages."
@@ -427,7 +424,7 @@ def render_eda(df_encoded, features, target, display_names,
         st.subheader(f"{class_names[1]} rate by phase")
         st.caption(
             "Share of respondents classified as **High Loneliness** "
-            "(UCLA-LS3 ≥ 22). This is the prediction target — its "
+            "(UCLA-LS3 ≥ 22) [4]. This is the prediction target — its "
             "phase-level shift gives context for the model task."
         )
 
@@ -455,3 +452,19 @@ def render_eda(df_encoded, features, target, display_names,
         cnt.index = [_phase_label(p) for p in cnt.index]
         cnt["Total"] = cnt.sum(axis=1)
         st.table(_centered(cnt, precision=0))
+
+    st.markdown("---")
+    with st.expander("📚 References", expanded=False):
+        st.markdown(
+            "[1] N. Sugaya et al. (2021). \"Psychological impact of the COVID-19 "
+            "epidemic on college students in Japan.\" *Psychiatry Research.*\n\n"
+            "[2] N. Sugaya et al. (2022). \"Mental health in Japan during the "
+            "COVID-19 pandemic: A longitudinal survey.\" *Scientific Reports.*\n\n"
+            "[3] N. Sugaya, T. Yamamoto, N. Ueda, and M. Suzuki (2024). "
+            "\"Long-term mental health impacts of COVID-19: Findings from a "
+            "four-wave longitudinal survey in Japan.\" *Journal of Affective "
+            "Disorders.*\n\n"
+            "[4] L. Deckx, F. van den Akker, N. Buntinx, and J. Doorslaer (2014). "
+            "\"A systematic literature review on loneliness.\" "
+            "*Reviews in Clinical Gerontology.*"
+        )

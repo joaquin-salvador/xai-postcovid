@@ -120,6 +120,7 @@ def main():
         "🔍 SHAP Explanations",
         "🔧 What-If Analysis",
         "🔄 Counterfactual Explorer",
+        "📚 Bibliography",
     ])
 
     st.sidebar.markdown("---")
@@ -188,6 +189,9 @@ def main():
                                precomputed_cfs, precomputed_cfs_limited,
                                precomputed_cfs_kdtree, precomputed_cfs_genetic,
                                precomputed_preds)
+    elif page == "📚 Bibliography":
+        from model import render_bibliography
+        render_bibliography()
 
 if __name__ == "__main__":
     main()

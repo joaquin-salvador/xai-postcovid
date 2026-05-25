@@ -52,12 +52,12 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
 
     st.title("🔍 SHAP Explanations")
     st.info(
-        "**SHAP (SHapley Additive exPlanations)** quantifies how each feature "
+        "**SHAP (SHapley Additive exPlanations)** [1] quantifies how each feature "
         "pushes the model's prediction toward *Low* or *High Loneliness* "
         "— at the **population level** (which features matter overall) and "
         "at the **individual level** (why *this* person was classified the "
-        "way they were). The values below come from **exact TreeSHAP** on "
-        "the XGBoost surrogate that mirrors the primary TabPFN model, "
+        "way they were). The values below come from **exact TreeSHAP** [1] on "
+        "the XGBoost surrogate that mirrors the primary TabPFN model [2], "
         "giving polynomial-time computation without sacrificing fidelity."
     )
 
@@ -214,3 +214,14 @@ def render_shap(model, X_explain, shap_values_test, shap_expected_value,
                 features, display_names, category_labels, likert_features,
                 class_names, pred
             ))
+
+    st.markdown("---")
+    with st.expander("📚 References", expanded=False):
+        st.markdown(
+            "[1] S. M. Lundberg and S.-I. Lee (2017). \"A unified approach to "
+            "interpreting model predictions.\" *Advances in Neural Information "
+            "Processing Systems (NeurIPS)*, vol. 30.\n\n"
+            "[2] N. Hollmann, S. Müller, K. Eggensperger, and F. Hutter (2023). "
+            "\"TabPFN: A transformer that solves small tabular classification "
+            "problems in a second.\" *ICLR 2023.*"
+        )

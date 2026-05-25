@@ -199,7 +199,7 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
         "**Live, interactive predictions.** Pick a real person from the test "
         "set, then move the sliders to see how altering their lifestyle, "
         "COVID-impact, or demographic features would shift the model's "
-        "loneliness probability. The SHAP waterfall on the right keeps the "
+        "loneliness probability [1]. The SHAP waterfall [2] on the right keeps the "
         "*original* attribution visible so you can compare the live "
         "prediction against the explanation for the unchanged person."
         + (" Predictions are served by the **XGBoost surrogate** for "
@@ -357,7 +357,7 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
     with st.expander("📏 Feature Scale Descriptions"):
         st.markdown(
             "Likert items are scored from **1 = *Not at all true*** to "
-            "**7 = *Very true***. Each row shows the original survey "
+            "**7 = *Very true*** [4]. Each row shows the original survey "
             "question that the respondent answered.\n\n"
             "**Demographics**\n\n"
             "| Feature | Scale |\n|---|---|\n"
@@ -386,6 +386,20 @@ def render_whatif(model, surrogate, X_train, X_explain, shap_values_test,
             "| Social Interaction Deterioration | Relationships with close people such as family and friends have deteriorated. |\n"
             "| Difficulty Living | Daily life was disrupted by shortages of COVID-19 prevention supplies (masks, thermometers, etc.) and other daily necessities. |\n"
             "| Difficulty Working | Changes in my lifestyle have caused problems with my work and studies. |"
+        )
+
+    st.markdown("---")
+    with st.expander("📚 References", expanded=False):
+        st.markdown(
+            "[1] A. Kshetry and M. Kantardzic (2024). \"WiXAI: A what-if explainability "
+            "framework for dynamic machine learning models.\"\n\n"
+            "[2] S. M. Lundberg and S.-I. Lee (2017). \"A unified approach to "
+            "interpreting model predictions.\" *NeurIPS*, vol. 30.\n\n"
+            "[3] R. K. Mothilal, A. Sharma, and C. Tan (2020). \"Explaining machine "
+            "learning classifiers through diverse counterfactual explanations.\" "
+            "*Proc. ACM FAccT 2020*, pp. 607–617.\n\n"
+            "[4] N. Sugaya et al. (2020–2024). Longitudinal survey instruments "
+            "(Phases 1–4), Tokyo, Osaka, Hyogo, Fukuoka, Japan."
         )
 
 # Counterfactual Explorer helpers
@@ -804,8 +818,8 @@ def render_counterfactuals(model, X_train, X_test, y_train, y_test, features,
     st.info(
         "Counterfactual explanations answer the question every clinician "
         "eventually asks: **\"What would need to change for this person's "
-        "prediction to be different?\"** Whereas SHAP attributes the "
-        "*current* prediction, DiCE searches for the **smallest, most "
+        "prediction to be different?\"** [3] Whereas SHAP [2] attributes the "
+        "*current* prediction, DiCE [1] searches for the **smallest, most "
         "diverse, and most actionable changes** that would flip the model's "
         "decision — turning a black-box probability into a concrete "
         "intervention plan."
@@ -924,3 +938,17 @@ def render_counterfactuals(model, X_train, X_test, y_train, y_test, features,
         features=features,
         display_names=display_names,
     )
+
+    st.markdown("---")
+    with st.expander("📚 References", expanded=False):
+        st.markdown(
+            "[1] R. K. Mothilal, A. Sharma, and C. Tan (2020). \"Explaining machine "
+            "learning classifiers through diverse counterfactual explanations.\" "
+            "*Proc. ACM FAccT 2020*, pp. 607–617.\n\n"
+            "[2] S. M. Lundberg and S.-I. Lee (2017). \"A unified approach to "
+            "interpreting model predictions.\" *NeurIPS*, vol. 30.\n\n"
+            "[3] S. Wachter, B. Mittelstadt, and C. Russell (2017). "
+            "\"Counterfactual explanations without opening the black box: "
+            "Automated decisions and the GDPR.\" *Harvard Journal of Law & "
+            "Technology*, vol. 31, no. 2."
+        )
