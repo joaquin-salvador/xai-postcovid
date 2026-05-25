@@ -698,10 +698,6 @@ def render_overview(model, X_test, y_test, class_names, precomputed_preds):
 def render_bibliography():
     """Full bibliography page listing all references cited in this application."""
     st.title("📚 Bibliography")
-    st.markdown(
-        "All sources cited in this application are listed below. "
-        "References follow IEEE citation style."
-    )
 
     references = [
         {
