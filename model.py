@@ -891,9 +891,3 @@ def render_bibliography():
     for ref in references:
         st.markdown(f"**{ref['key']}** {ref['text']}")
         st.markdown("")
-
-    st.markdown("---")
-    st.caption(
-        "For the full list of references with annotations, see the thesis manuscript "
-        "bibliography (biblio.bib) or the companion journal paper."
-    )
