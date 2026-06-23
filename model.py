@@ -273,8 +273,7 @@ def load_artifacts():
 ARCHITECTURE_REGIONS = [
     {
         "key": "dataset",
-        "top": 4, "left": 3, "width": 30, "height": 70,
-        "q_top": 6, "q_left": 22,
+        "coords": (1809, 81, 1878, 142),  # x1, y1, x2, y2
         "title": "Dataset + Data Preprocessing",
         "body": (
             "<ul>"
@@ -293,8 +292,7 @@ ARCHITECTURE_REGIONS = [
     },
     {
         "key": "model",
-        "top": 0, "left": 40, "width": 38, "height": 60,
-        "q_top": 4, "q_left": 4,
+        "coords": (1738, 400, 1805, 443),
         "title": "Model + Explainability Layer",
         "body": (
             "<p><strong>Primary Model: TabPFN</strong></p>"
@@ -323,8 +321,7 @@ ARCHITECTURE_REGIONS = [
     },
     {
         "key": "shap",
-        "top": 70, "left": 26, "width": 22, "height": 38,
-        "q_top": 28, "q_left": 8,
+        "coords": (1002, 861, 1056, 896),
         "title": "SHAP (SHapley Additive exPlanations)",
         "body": (
             "<p>SHAP produces <strong>both global and local feature "
@@ -344,8 +341,7 @@ ARCHITECTURE_REGIONS = [
     },
     {
         "key": "dice",
-        "top": 20, "left": 47, "width": 32, "height": 56,
-        "q_top": 70, "q_left": 78,
+        "coords": (346, 347, 394, 387),
         "title": "DiCE (Diverse Counterfactual Explanations)",
         "body": (
             "<p>DiCE generates <strong>diverse, actionable</strong> "
@@ -378,13 +374,26 @@ def _render_architecture_diagram():
         img_b64 = base64.b64encode(f.read()).decode("ascii")
 
     region_html = []
+
+    IMG_W = 1898
+    IMG_H = 984
+
     for r in ARCHITECTURE_REGIONS:
+        x1, y1, x2, y2 = r["coords"]
+
+        left = x1 / IMG_W * 100
+        top = y1 / IMG_H * 100
+        width = (x2 - x1) / IMG_W * 100
+        height = (y2 - y1) / IMG_H * 100
+
         region_html.append(textwrap.dedent(f"""
             <div class="arch-region arch-region-{r['key']}"
-                 style="top:{r['top']}%; left:{r['left']}%;
-                        width:{r['width']}%; height:{r['height']}%;">
-              <button class="arch-q" type="button" aria-label="{r['title']}"
-                      style="top:{r['q_top']}%; left:{r['q_left']}%;">?</button>
+                 style="top:{top}%; left:{left}%;
+                        width:{width}%; height:{height}%;">
+              <button class="arch-q" type="button"
+                      aria-label="{r['title']}"
+                      style="top:50%; left:50%;
+                             transform:translate(-50%, -50%);">?</button>
               <div class="arch-tooltip" role="tooltip">
                 <div class="arch-tooltip-title">{r['title']}</div>
                 <div class="arch-tooltip-body">{r['body']}</div>
